@@ -508,6 +508,17 @@
   "recentIcons": "最近使用",
   "iconsInFile": "このファイル内",
   "otherIconSets": "その他",
+  "insertPhoto": "写真を挿入",
+  "stockPhoto": "ストック写真",
+  "searchPhotos": "写真を検索...",
+  "noPhotosFound": "写真が見つかりません",
+  "photoSearchHint": "入力して {service} の無料写真を検索",
+  "photoSearchFailed": "{service} を検索できませんでした。接続とキーを確認してください。",
+  "insertPhotoFailed": "写真を挿入できませんでした。",
+  "photoService": "写真サービス",
+  "photoCredit": "{photographer} による写真（{service}）",
+  "photoKeyHeading": "自分のキーで {service} を検索",
+  "photoKeyDescription": "{service} の写真は無料で使えます。API キーも無料で、このデバイスに保存されます。",
   "iconResultCount": {
     "many": "{count} 件の結果"
   },

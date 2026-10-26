@@ -46,9 +46,12 @@ export {
 export { setPexelsAPIKey, setUnsplashAccessKey } from './stock-photo'
 export { importSVG } from './create'
 export {
+  getStockPhotoProvider,
   getStockPhotoProviders,
   registerStockPhotoProvider,
   setActiveStockPhotoProvider,
+  type StockPhotoOrientation,
   type StockPhotoProvider,
-  type StockPhotoResult
+  type StockPhotoResult,
+  type StockPhotoSearchOptions
 } from './stock-photo/providers'

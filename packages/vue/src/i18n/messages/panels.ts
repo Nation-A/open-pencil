@@ -613,6 +613,21 @@ export const panelMessageDefaults = {
   recentIcons: 'Recent',
   iconsInFile: 'In this file',
   otherIconSets: 'Other',
+  insertPhoto: 'Insert photo',
+  /** The image fill's button that fills it with a photo from Unsplash or Pexels. */
+  stockPhoto: 'Stock photo',
+  searchPhotos: 'Search photos...',
+  noPhotosFound: 'No photos found',
+  photoSearchHint: params('Type to search free photos on {service}'),
+  photoSearchFailed: params('{service} could not be searched. Check your connection and key.'),
+  insertPhotoFailed: 'The photo could not be inserted.',
+  photoService: 'Photo service',
+  /** A placed photo's layer name and the picker's credit, as the services ask to be credited. */
+  photoCredit: params('Photo by {photographer} on {service}'),
+  photoKeyHeading: params('Search {service} with your own key'),
+  photoKeyDescription: params(
+    '{service} photos are free to use. Its API key is free too, and stays on this device.'
+  ),
   iconResultCount: count({ one: '{count} result', many: '{count} results' }),
   /** More icons match than a search returns. */
   iconResultCountCapped: params('{count}+ results'),

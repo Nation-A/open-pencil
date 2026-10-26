@@ -3,7 +3,7 @@ import { uniq } from 'es-toolkit'
 import { EDITOR_TOOLS, READ_ONLY_TOOLS, type EditorToolDef, type Tool } from '@open-pencil/core'
 
 /** Toolbar buttons that run a command instead of switching the tool. */
-export const TOOLBAR_ACTIONS = ['insert-icon'] as const
+export const TOOLBAR_ACTIONS = ['insert-icon', 'insert-photo'] as const
 export type ToolbarAction = (typeof TOOLBAR_ACTIONS)[number]
 export type ToolbarEntry = Tool | ToolbarAction
 

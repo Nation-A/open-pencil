@@ -131,6 +131,7 @@ export function useAppMenu() {
     settings: 'settings',
     variables: 'variables',
     'insert-icon': 'insertIcon',
+    'insert-photo': 'insertPhoto',
     'view-rulers': 'rulers',
     'view-pixel-grid': 'pixelGrid',
     'view-multiplayer-cursors': 'multiplayerCursors',
@@ -194,6 +195,9 @@ export function useAppMenu() {
     variables: () => openVariablesDialog(store),
     'insert-icon': () => {
       store.state.iconPickerOpen = true
+    },
+    'insert-photo': () => {
+      store.state.photoPickerOpen = true
     },
     'export-png': () => exportSelection('png'),
     'export-svg': () => exportSelection('svg'),

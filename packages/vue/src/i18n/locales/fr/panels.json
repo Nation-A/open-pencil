@@ -514,6 +514,17 @@
   "recentIcons": "Récentes",
   "iconsInFile": "Dans ce fichier",
   "otherIconSets": "Autres",
+  "insertPhoto": "Insérer une photo",
+  "stockPhoto": "Photo de stock",
+  "searchPhotos": "Rechercher des photos...",
+  "noPhotosFound": "Aucune photo trouvée",
+  "photoSearchHint": "Tapez pour rechercher des photos gratuites sur {service}",
+  "photoSearchFailed": "Impossible de rechercher sur {service}. Vérifiez votre connexion et votre clé.",
+  "insertPhotoFailed": "La photo n'a pas pu être insérée.",
+  "photoService": "Service de photos",
+  "photoCredit": "Photo de {photographer} sur {service}",
+  "photoKeyHeading": "Rechercher sur {service} avec votre propre clé",
+  "photoKeyDescription": "Les photos {service} sont gratuites. Sa clé d'API l'est aussi et reste sur cet appareil.",
   "iconResultCount": {
     "one": "{count} résultat",
     "many": "{count} résultats"

@@ -28,7 +28,6 @@ export function createInitialAppEditorState(pageId: string): AppEditorState {
     variablesOpen: false,
     statusesOpen: false,
     iconPickerOpen: false,
-    photoPickerOpen: false,
     renameNodeId: null,
     numberFieldFocused: false,
     preparation: null,
@@ -56,8 +55,6 @@ export type AppEditorState = EditorState & {
   statusesOpen: boolean
   /** The icon picker, opened from the toolbar, the Object menu, or the palette. */
   iconPickerOpen: boolean
-  /** The stock photo picker, opened from the toolbar, the Object menu, or the palette. */
-  photoPickerOpen: boolean
   renameNodeId: string | null
   numberFieldFocused: boolean
   preparation: EditorPreparation | null

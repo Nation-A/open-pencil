@@ -310,11 +310,6 @@ export const APP_MENU_SCHEMA = [
         label: 'Insert Icon…',
         palette: { keywords: ['iconify', 'symbol', 'glyph', 'lucide'] }
       },
-      {
-        id: 'insert-photo',
-        label: 'Insert Photo…',
-        palette: { keywords: ['stock', 'image', 'picture', 'unsplash', 'pexels'] }
-      },
       { type: 'separator' },
       {
         id: 'selection.toggleMask',

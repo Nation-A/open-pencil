@@ -1,1 +1,1 @@
-- **Insert photo** searches Unsplash or Pexels and places a photo credited to its photographer, and an image fill's **Stock photo** fills a layer the same way; the picker asks for the service's free key the first time.
+- An image fill's **Stock photo** searches Unsplash or Pexels and fills the layer with the photo picked, crediting its photographer; the picker asks for the service's free key the first time.

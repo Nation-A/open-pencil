@@ -8,7 +8,7 @@ import { coverImageTransform } from '@open-pencil/scene-graph/images'
 import { useI18n } from '@open-pencil/vue/i18n'
 
 import { useEditorStore } from '@/app/editor/active-store'
-import { downloadPhoto } from '@/app/editor/photos/place'
+import { downloadPhoto } from '@/app/editor/photos/download'
 import type { PhotoService } from '@/app/editor/photos/search'
 import { toast } from '@/app/shell/ui'
 import NumberField from '@/components/inputs/NumberField.vue'

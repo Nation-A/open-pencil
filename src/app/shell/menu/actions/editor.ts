@@ -89,9 +89,6 @@ export function createSharedEditorMenuActions(
     'insert-icon': () => {
       store.state.iconPickerOpen = true
     },
-    'insert-photo': () => {
-      store.state.photoPickerOpen = true
-    },
     'theme-light': () => setTheme('light'),
     'theme-dark': () => setTheme('dark'),
     'theme-auto': () => setTheme('auto'),

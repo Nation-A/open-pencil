@@ -209,3 +209,31 @@ test('an edited icon says so, asks before a swap discards the edit, and resets o
   await section.getByRole('button', { name: 'Detach icon' }).click()
   await expect(section).toBeHidden()
 })
+
+test('Object › Insert Icon opens the picker while its button is hidden from the toolbar', async () => {
+  const page = ctx.page
+  await page.evaluate(async () => {
+    const path = '/src/app/settings/preferences/store.ts'
+    const store = await import(path)
+    const toolbar = store.appPreferences.value.toolbar
+    store.updateToolbarLayout({ ...toolbar, hidden: [...toolbar.hidden, 'insert-icon'] })
+  })
+  await expect(page.getByRole('button', { name: 'Insert icon' })).toHaveCount(0)
+
+  const menu = await openAppMenu(page, 'Object')
+  await menu.getByRole('menuitem', { name: 'Insert Icon…' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Insert icon' })
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
+  await page.evaluate(async () => {
+    const path = '/src/app/settings/preferences/store.ts'
+    const store = await import(path)
+    const toolbar = store.appPreferences.value.toolbar
+    store.updateToolbarLayout({
+      ...toolbar,
+      hidden: toolbar.hidden.filter((entry: string) => entry !== 'insert-icon')
+    })
+  })
+})

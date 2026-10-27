@@ -371,10 +371,6 @@
         "label": "Insert Icon…"
       },
       {
-        "id": "insert-photo",
-        "label": "Insert Photo…"
-      },
-      {
         "type": "separator"
       },
       {

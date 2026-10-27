@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test'
 import { toUint8Array } from 'js-base64'
 
 import { expect, test, useEditorSetupWithClear } from '#tests/e2e/fixtures'
-import { openAppMenu } from '#tests/helpers/menu'
 import { getSelectedNode } from '#tests/helpers/store'
 
 /** A one-pixel PNG served for every photo, so the workflow needs no network. */
@@ -72,14 +71,24 @@ test.beforeEach(() => {
   requests.reported = []
 })
 
+/** Draws a rectangle, opens its fill as an image, and opens Stock photo. */
 async function openPicker(page: Page) {
-  await page.getByRole('button', { name: 'Insert photo' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Insert photo' })
+  await ctx.canvas.drawRect(120, 120, 160, 120)
+  await page.getByTestId('fill-picker-swatch').first().click()
+  await page.getByTestId('fill-picker-tab-image').click()
+  await page.getByTestId('fill-picker-stock-photo').click()
+  const dialog = page.getByRole('dialog', { name: 'Stock photo' })
   await expect(dialog).toBeVisible()
   return dialog
 }
 
-test('the picker asks for a service key in place, then searches and places a credited photo', async () => {
+/** The selected layer's image fill, or none. */
+async function imageFill(page: Page) {
+  const node = await getSelectedNode(page)
+  return node?.fills.find((fill) => fill.type === 'IMAGE')
+}
+
+test('Stock photo asks for a service key in place, then fills the layer with the photo picked', async () => {
   const page = ctx.page
   const dialog = await openPicker(page)
   await expect(dialog.getByRole('textbox', { name: 'Search photos...' })).toBeHidden()
@@ -94,16 +103,12 @@ test('the picker asks for a service key in place, then searches and places a cre
 
   await dialog.getByRole('option').first().click()
   await expect(dialog).toBeHidden()
-  await expect
-    .poll(async () => (await getSelectedNode(page))?.name)
-    .toBe('Photo by Ann Lee on Unsplash')
-  const placed = await getSelectedNode(page)
-  expect(placed?.fills[0]?.type).toBe('IMAGE')
+  await expect.poll(async () => (await imageFill(page))?.imageHash).toBeTruthy()
   // Unsplash's API terms ask to be told of every photo used.
   await expect.poll(() => requests.reported).toEqual(['/photos/first/download'])
 })
 
-test('switching to a service without a key asks for that one, and its photos fill a layer', async () => {
+test('switching to a service without a key asks for that one, and its photo fills the layer', async () => {
   const page = ctx.page
   const dialog = await openPicker(page)
   await dialog.getByRole('combobox', { name: 'Photo service' }).click()
@@ -114,27 +119,7 @@ test('switching to a service without a key asks for that one, and its photos fil
 
   await dialog.getByRole('textbox', { name: 'Search photos...' }).fill('forest')
   await dialog.getByRole('option').first().click()
-  await expect
-    .poll(async () => (await getSelectedNode(page))?.name)
-    .toBe('Photo by Jonas Berg on Pexels')
+  await expect.poll(async () => (await imageFill(page))?.imageHash).toBeTruthy()
   expect(requests.pexels).toEqual(['forest'])
   expect(requests.reported).toEqual([])
-})
-
-test('Object › Insert Photo opens the picker while its button is hidden from the toolbar', async () => {
-  const page = ctx.page
-  await page.evaluate(async () => {
-    const path = '/src/app/settings/preferences/store.ts'
-    const store = await import(path)
-    const toolbar = store.appPreferences.value.toolbar
-    store.updateToolbarLayout({ ...toolbar, hidden: [...toolbar.hidden, 'insert-photo'] })
-  })
-  await expect(page.getByRole('button', { name: 'Insert photo' })).toHaveCount(0)
-
-  const menu = await openAppMenu(page, 'Object')
-  await menu.getByRole('menuitem', { name: 'Insert Photo…' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Insert photo' })
-  await expect(dialog).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(dialog).toBeHidden()
 })

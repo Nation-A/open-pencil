@@ -1,9 +1,6 @@
 import { getStockPhotoProvider, type StockPhotoResult } from '@open-pencil/core/tools'
 import { IMPORTABLE_RASTER_TYPES } from '@open-pencil/scene-graph/images'
 
-import type { EditorStore } from '@/app/editor/active-store'
-import { pastePoint } from '@/app/editor/clipboard/paste/content'
-
 import type { PhotoService } from './search'
 
 /**
@@ -25,22 +22,4 @@ export async function downloadPhoto(service: PhotoService, photo: StockPhotoResu
     ?.reportUse?.(photo)
     .catch(() => undefined)
   return { bytes, type }
-}
-
-/**
- * Places `photo` at the middle of the view and selects it, as a layer called `name`: its
- * credit, "Photo by Ann Lee on Unsplash", which the services ask for.
- */
-export async function insertPhoto(
-  store: EditorStore,
-  service: PhotoService,
-  photo: StockPhotoResult,
-  name: string
-): Promise<void> {
-  const { bytes, type } = await downloadPhoto(service, photo)
-  // The layer is named from the file name without its extension, so it needs one to lose.
-  const extension = type.slice(type.indexOf('/') + 1)
-  const file = new File([bytes], `${name}.${extension}`, { type })
-  const { x, y } = pastePoint(store)
-  await store.placeImageFiles([file], x, y)
 }

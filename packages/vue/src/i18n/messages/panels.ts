@@ -613,7 +613,6 @@ export const panelMessageDefaults = {
   recentIcons: 'Recent',
   iconsInFile: 'In this file',
   otherIconSets: 'Other',
-  insertPhoto: 'Insert photo',
   /** The image fill's button that fills it with a photo from Unsplash or Pexels. */
   stockPhoto: 'Stock photo',
   searchPhotos: 'Search photos...',

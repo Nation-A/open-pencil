@@ -47,12 +47,11 @@ describe('normalizeToolbarLayout', () => {
 
   test('keeps commands out of flyouts', () => {
     const result = layout([['SELECT', 'insert-icon', 'HAND'], ['COMMENT']])
-    expect(result.groups.slice(-7)).toEqual([
+    expect(result.groups.slice(-6)).toEqual([
       ['STICKY'],
       ['SHAPE_WITH_TEXT'],
       ['CONNECTOR'],
       ['insert-icon'],
-      ['insert-photo'],
       ['HAND'],
       ['COMMENT']
     ])
@@ -77,8 +76,7 @@ describe('normalizeToolbarLayout', () => {
       ['PEN', 'PENCIL'],
       ['HAND'],
       ['COMMENT'],
-      ['insert-icon'],
-      ['insert-photo']
+      ['insert-icon']
     ])
   })
 })
@@ -113,7 +111,7 @@ describe('toolbarItems', () => {
         flyout: ['LINE', 'ELLIPSE', 'POLYGON', 'STAR']
       }
     })
-    expect(items.at(-1)).toEqual({ kind: 'action', action: 'insert-photo' })
+    expect(items.at(-1)).toEqual({ kind: 'action', action: 'insert-icon' })
   })
 
   test('leaves out a flyout whose members are all hidden', () => {
@@ -184,7 +182,7 @@ describe('editing', () => {
       canMoveUp: true
     })
     expect(row('PEN')).toMatchObject({ joined: false, canJoin: true })
-    expect(row('insert-photo')).toMatchObject({
+    expect(row('insert-icon')).toMatchObject({
       canJoin: false,
       canMoveDown: false
     })

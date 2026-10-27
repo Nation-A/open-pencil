@@ -38,7 +38,6 @@ export const menuMessageDefaults = {
   settings: 'Settings…',
   variables: 'Variables…',
   insertIcon: 'Insert Icon…',
-  insertPhoto: 'Insert Photo…',
   rulers: 'Rulers',
   pixelGrid: 'Pixel grid',
   multiplayerCursors: 'Multiplayer cursors',

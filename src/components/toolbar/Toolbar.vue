@@ -13,7 +13,6 @@ import { appPreferences } from '@/app/settings/preferences/store'
 import { useActionToast } from '@/app/shell/toast/action'
 import InsertIconButton from '@/components/icon-picker/InsertIconButton.vue'
 import { toolIcons } from '@/components/icons'
-import InsertPhotoButton from '@/components/photo-picker/InsertPhotoButton.vue'
 import { useToolbarActions } from '@/components/toolbar/actions'
 import DesktopToolbar from '@/components/toolbar/DesktopToolbar.vue'
 import { useToolLabels } from '@/components/toolbar/labels'
@@ -83,12 +82,10 @@ function onActionTap(item: ToolbarActionItem) {
       >
         <template #action="{ action }">
           <InsertIconButton v-if="action === 'insert-icon'" :ui="toolbarUI" />
-          <InsertPhotoButton v-else-if="action === 'insert-photo'" :ui="toolbarUI" />
         </template>
         <template #hidden>
           <template v-for="action in hiddenActions" :key="action">
             <InsertIconButton v-if="action === 'insert-icon'" anchored />
-            <InsertPhotoButton v-else-if="action === 'insert-photo'" anchored />
           </template>
         </template>
       </DesktopToolbar>
@@ -116,11 +113,9 @@ function onActionTap(item: ToolbarActionItem) {
         <template #end>
           <template v-for="action in actionItems" :key="action">
             <InsertIconButton v-if="action === 'insert-icon'" mobile :ui="toolbarUI" />
-            <InsertPhotoButton v-else-if="action === 'insert-photo'" mobile :ui="toolbarUI" />
           </template>
           <template v-for="action in hiddenActions" :key="action">
             <InsertIconButton v-if="action === 'insert-icon'" anchored />
-            <InsertPhotoButton v-else-if="action === 'insert-photo'" anchored />
           </template>
         </template>
       </MobileToolbar>

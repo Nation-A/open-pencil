@@ -13,8 +13,15 @@ import type { ToolbarUI } from '@/components/toolbar/types'
 
 import PhotoPicker from './PhotoPicker.vue'
 
-/** The toolbar's stock photo picker, also opened by the Insert Photo command. */
-const { ui, mobile = false } = defineProps<{ ui?: ToolbarUI; mobile?: boolean }>()
+/**
+ * The toolbar's stock photo picker, also opened by the Insert Photo command. `anchored` mounts it
+ * without its button, over the toolbar, while the button is hidden from it.
+ */
+const {
+  ui,
+  mobile = false,
+  anchored = false
+} = defineProps<{ ui?: ToolbarUI; mobile?: boolean; anchored?: boolean }>()
 const store = useEditorStore()
 const panels = usePanelMessages()
 
@@ -40,7 +47,10 @@ function insert(photo: StockPhotoResult, service: PhotoService, serviceName: str
     align="center"
     @select="insert"
   >
-    <template #trigger>
+    <template v-if="anchored" #anchor>
+      <span aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0" />
+    </template>
+    <template v-else #trigger>
       <ToolButton
         :icon="IconImagePlus"
         :label="panels.insertPhoto"

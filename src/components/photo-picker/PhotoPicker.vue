@@ -87,8 +87,11 @@ function pick(id: string) {
     @select="pick"
     @load-more="search.loadMore"
   >
-    <template #trigger>
+    <template v-if="$slots.trigger" #trigger>
       <slot name="trigger" />
+    </template>
+    <template v-else #anchor>
+      <slot name="anchor" />
     </template>
     <template #actions>
       <AppSelect

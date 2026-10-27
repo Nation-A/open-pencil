@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import { toUint8Array } from 'js-base64'
 
 import { expect, test, useEditorSetupWithClear } from '#tests/e2e/fixtures'
+import { openAppMenu } from '#tests/helpers/menu'
 import { getSelectedNode } from '#tests/helpers/store'
 
 /** A one-pixel PNG served for every photo, so the workflow needs no network. */
@@ -118,4 +119,22 @@ test('switching to a service without a key asks for that one, and its photos fil
     .toBe('Photo by Jonas Berg on Pexels')
   expect(requests.pexels).toEqual(['forest'])
   expect(requests.reported).toEqual([])
+})
+
+test('Object › Insert Photo opens the picker while its button is hidden from the toolbar', async () => {
+  const page = ctx.page
+  await page.evaluate(async () => {
+    const path = '/src/app/settings/preferences/store.ts'
+    const store = await import(path)
+    const toolbar = store.appPreferences.value.toolbar
+    store.updateToolbarLayout({ ...toolbar, hidden: [...toolbar.hidden, 'insert-photo'] })
+  })
+  await expect(page.getByRole('button', { name: 'Insert photo' })).toHaveCount(0)
+
+  const menu = await openAppMenu(page, 'Object')
+  await menu.getByRole('menuitem', { name: 'Insert Photo…' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Insert photo' })
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })

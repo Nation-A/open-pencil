@@ -11,16 +11,24 @@ import statusTheme from '@/theme/feedback/status'
 interface ProviderConnectionTestButtonProps {
   status: 'idle' | 'testing' | 'success' | 'error'
   reason?: ProviderConnectionTestFailureReason | null
+  /** Says what went wrong in place of the message for `reason`, for services that are not models. */
+  failure?: string
   disabled?: boolean
 }
 
-const { status, reason, disabled = false } = defineProps<ProviderConnectionTestButtonProps>()
+const {
+  status,
+  reason,
+  failure,
+  disabled = false
+} = defineProps<ProviderConnectionTestButtonProps>()
 const emit = defineEmits<{ test: [] }>()
 const { ai, common } = useI18n()
 
 const resultMessage = computed(() => {
   if (status === 'success') return ai.value.connectionTestSuccess
   if (status !== 'error') return null
+  if (failure) return failure
 
   switch (reason) {
     case 'missing-api-key':

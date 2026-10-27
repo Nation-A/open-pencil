@@ -32,6 +32,8 @@ export interface StockPhotoProvider {
   /** The service's name as people know it: "Pexels". */
   label?: string
   search(query: string, options: StockPhotoSearchOptions): Promise<StockPhotoResult[]>
+  /** The photos the service shows before a search: Unsplash's editorial feed, Pexels' curated. */
+  browse?(options: StockPhotoSearchOptions): Promise<StockPhotoResult[]>
   /**
    * Tells the service a photo was used, which Unsplash's API terms require of every placed
    * photo; services that do not ask for it leave this out.
@@ -108,52 +110,61 @@ export function setPexelsAPIKey(key: CredentialSource): void {
   }
 }
 
+async function pexelsPhotos(
+  path: string,
+  query: Record<string, string | number | undefined>,
+  targetDim: number
+): Promise<StockPhotoResult[]> {
+  const key = await resolveCredential(pexelsAPIKey)
+  if (!key) throw new Error('Pexels API key not configured')
+  const response = await ofetch.raw(`https://api.pexels.com/v1/${path}`, {
+    headers: { Authorization: key },
+    ignoreResponseError: true,
+    query,
+    retry: 0
+  })
+  if (!response.ok) throw new Error(`Pexels ${response.status}`)
+  const data = v.parse(pexelsSearchSchema, response._data)
+  return data.photos.map((photo) => ({
+    url: pickPexelsSize(photo.src, targetDim),
+    thumbnailURL: photo.src.medium,
+    width: photo.width,
+    height: photo.height,
+    photographer: photo.photographer,
+    photographerURL: photo.photographer_url,
+    pageURL: photo.url,
+    sourceId: String(photo.id)
+  }))
+}
+
 const pexelsProvider: StockPhotoProvider = {
   name: 'pexels',
   label: 'Pexels',
-  async search(query, { perPage, page = 1, orientation, targetDim }) {
-    const key = await resolveCredential(pexelsAPIKey)
-    if (!key) throw new Error('Pexels API key not configured')
-    const response = await ofetch.raw('https://api.pexels.com/v1/search', {
-      headers: { Authorization: key },
-      ignoreResponseError: true,
-      query: { query, per_page: perPage, page, orientation },
-      retry: 0
-    })
-    if (!response.ok) throw new Error(`Pexels ${response.status}`)
-    const data = v.parse(pexelsSearchSchema, response._data)
-    return data.photos.map((photo) => ({
-      url: pickPexelsSize(photo.src, targetDim),
-      thumbnailURL: photo.src.medium,
-      width: photo.width,
-      height: photo.height,
-      photographer: photo.photographer,
-      photographerURL: photo.photographer_url,
-      pageURL: photo.url,
-      sourceId: String(photo.id)
-    }))
+  search(query, { perPage, page = 1, orientation, targetDim }) {
+    return pexelsPhotos('search', { query, per_page: perPage, page, orientation }, targetDim)
+  },
+  browse({ perPage, page = 1, targetDim }) {
+    return pexelsPhotos('curated', { per_page: perPage, page }, targetDim)
   }
 }
 
-const unsplashSearchSchema = v.object({
-  results: v.array(
-    v.object({
-      id: v.string(),
-      width: v.number(),
-      height: v.number(),
-      urls: v.object({
-        raw: v.string(),
-        full: v.string(),
-        regular: v.string(),
-        small: v.string(),
-        thumb: v.string()
-      }),
-      user: v.object({ name: v.string(), links: v.object({ html: v.string() }) }),
-      links: v.object({ html: v.string(), download_location: v.string() })
-    })
-  )
+const unsplashPhotoSchema = v.object({
+  id: v.string(),
+  width: v.number(),
+  height: v.number(),
+  urls: v.object({
+    raw: v.string(),
+    full: v.string(),
+    regular: v.string(),
+    small: v.string(),
+    thumb: v.string()
+  }),
+  user: v.object({ name: v.string(), links: v.object({ html: v.string() }) }),
+  links: v.object({ html: v.string(), download_location: v.string() })
 })
-type UnsplashPhoto = v.InferOutput<typeof unsplashSearchSchema>['results'][number]
+type UnsplashPhoto = v.InferOutput<typeof unsplashPhotoSchema>
+const unsplashSearchSchema = v.object({ results: v.array(unsplashPhotoSchema) })
+const unsplashListSchema = v.array(unsplashPhotoSchema)
 
 /** How long a use report may take; the photo is already placed, so a slow one is dropped. */
 const REPORT_USE_TIMEOUT_MS = 10_000
@@ -188,37 +199,52 @@ async function unsplashHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Client-ID ${key}`, 'Accept-Version': 'v1' }
 }
 
+async function unsplashGet(path: string, query: Record<string, string | number | undefined>) {
+  const response = await ofetch.raw(`https://api.unsplash.com/${path}`, {
+    headers: await unsplashHeaders(),
+    ignoreResponseError: true,
+    query,
+    retry: 0
+  })
+  if (!response.ok) throw new Error(`Unsplash ${response.status}`)
+  return response._data
+}
+
+function unsplashResult(photo: UnsplashPhoto, targetDim: number): StockPhotoResult {
+  unsplashDownloads.set(photo.id, photo.links.download_location)
+  return {
+    url: pickUnsplashSize(photo.urls, targetDim),
+    thumbnailURL: photo.urls.small,
+    width: photo.width,
+    height: photo.height,
+    photographer: photo.user.name,
+    photographerURL: unsplashLink(photo.user.links.html),
+    pageURL: unsplashLink(photo.links.html),
+    sourceId: photo.id
+  }
+}
+
 const unsplashProvider: StockPhotoProvider = {
   name: 'unsplash',
   label: 'Unsplash',
   async search(query, { perPage, page = 1, orientation, targetDim }) {
-    const headers = await unsplashHeaders()
-    const response = await ofetch.raw('https://api.unsplash.com/search/photos', {
-      headers,
-      ignoreResponseError: true,
-      query: {
+    const data = v.parse(
+      unsplashSearchSchema,
+      await unsplashGet('search/photos', {
         query,
         per_page: perPage,
         page,
         orientation: orientation === 'square' ? 'squarish' : orientation
-      },
-      retry: 0
-    })
-    if (!response.ok) throw new Error(`Unsplash ${response.status}`)
-    const data = v.parse(unsplashSearchSchema, response._data)
-    return data.results.map((photo) => {
-      unsplashDownloads.set(photo.id, photo.links.download_location)
-      return {
-        url: pickUnsplashSize(photo.urls, targetDim),
-        thumbnailURL: photo.urls.small,
-        width: photo.width,
-        height: photo.height,
-        photographer: photo.user.name,
-        photographerURL: unsplashLink(photo.user.links.html),
-        pageURL: unsplashLink(photo.links.html),
-        sourceId: photo.id
-      }
-    })
+      })
+    )
+    return data.results.map((photo) => unsplashResult(photo, targetDim))
+  },
+  async browse({ perPage, page = 1, targetDim }) {
+    const data = v.parse(
+      unsplashListSchema,
+      await unsplashGet('photos', { per_page: perPage, page })
+    )
+    return data.map((photo) => unsplashResult(photo, targetDim))
   },
   async reportUse(photo) {
     const location = unsplashDownloads.get(photo.sourceId)
@@ -234,4 +260,45 @@ const unsplashProvider: StockPhotoProvider = {
 /** The registered service called `name`, such as "pexels", or null without its key. */
 export function getStockPhotoProvider(name: string): StockPhotoProvider | null {
   return providers.get(name) ?? null
+}
+
+/**
+ * What one request with a key says about it: it works, the service refused it, the hourly
+ * limit is used up, or the service could not be reached or answered something else.
+ */
+export type StockPhotoKeyCheck = 'ok' | 'rejected' | 'rate-limited' | 'network' | 'failed'
+
+/**
+ * Checks a key with the cheapest request each service has, one photo from the list shown before a
+ * search; it counts against the hourly limit like any other.
+ */
+export async function checkStockPhotoKey(
+  service: 'pexels' | 'unsplash',
+  key: string
+): Promise<StockPhotoKeyCheck> {
+  const request: { url: string; headers: Record<string, string> } =
+    service === 'pexels'
+      ? { url: 'https://api.pexels.com/v1/curated', headers: { Authorization: key } }
+      : {
+          url: 'https://api.unsplash.com/photos',
+          headers: { Authorization: `Client-ID ${key}`, 'Accept-Version': 'v1' }
+        }
+  let response
+  try {
+    response = await ofetch.raw(request.url, {
+      headers: request.headers,
+      ignoreResponseError: true,
+      query: { per_page: 1 },
+      responseType: 'text',
+      retry: 0
+    })
+  } catch {
+    return 'network'
+  }
+  if (response.ok) return 'ok'
+  // Unsplash answers a used-up hour with 403 and no requests remaining; Pexels with 429.
+  if (response.status === 429 || response.headers.get('x-ratelimit-remaining') === '0') {
+    return 'rate-limited'
+  }
+  return response.status === 401 || response.status === 403 ? 'rejected' : 'failed'
 }

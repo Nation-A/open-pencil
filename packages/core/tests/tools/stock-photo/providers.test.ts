@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from 'bun:test'
 
 import {
+  checkStockPhotoKey,
   getStockPhotoProvider,
   setPexelsAPIKey,
   setUnsplashAccessKey
@@ -86,4 +87,83 @@ test('removing a key unregisters its service', () => {
   expect(getStockPhotoProvider('pexels')).not.toBeNull()
   setPexelsAPIKey(null)
   expect(getStockPhotoProvider('pexels')).toBeNull()
+})
+
+const UNSPLASH_PHOTO = {
+  id: 'abc',
+  width: 1200,
+  height: 800,
+  urls: { raw: 'r', full: 'f', regular: 'g', small: 's', thumb: 't' },
+  user: { name: 'Ann Lee', links: { html: 'https://unsplash.com/@ann' } },
+  links: {
+    html: 'https://unsplash.com/photos/abc',
+    download_location: 'https://api.unsplash.com/photos/abc/download'
+  }
+}
+
+test('before a search, Unsplash lists its editorial feed and Pexels its curated photos', async () => {
+  answer({
+    '/photos': [UNSPLASH_PHOTO],
+    '/v1/curated': {
+      photos: [
+        {
+          id: 7,
+          width: 10,
+          height: 10,
+          url: 'https://www.pexels.com/photo/7',
+          photographer: 'Bo',
+          photographer_url: 'https://www.pexels.com/@bo',
+          src: { original: 'o', large2x: 'l2', large: 'l', medium: 'm', small: 's' }
+        }
+      ]
+    }
+  })
+  setUnsplashAccessKey('key')
+  setPexelsAPIKey('key')
+  const unsplash = await getStockPhotoProvider('unsplash')?.browse?.({
+    perPage: 24,
+    targetDim: 1080
+  })
+  const pexels = await getStockPhotoProvider('pexels')?.browse?.({ perPage: 24, targetDim: 1080 })
+  expect(unsplash?.map((photo) => photo.sourceId)).toEqual(['abc'])
+  expect(pexels?.map((photo) => photo.sourceId)).toEqual(['7'])
+  expect(requests.map((url) => `${url.pathname}?${url.searchParams}`)).toEqual([
+    '/photos?per_page=24&page=1',
+    '/v1/curated?per_page=24&page=1'
+  ])
+})
+
+test('a key check tells a working key from a refused one, a used-up hour, and no answer', async () => {
+  const answers: (Response | Error)[] = [
+    new Response('[]'),
+    new Response('OAuth error: The access token is invalid', { status: 401 }),
+    new Response('Rate Limit Exceeded', {
+      status: 403,
+      headers: { 'X-Ratelimit-Remaining': '0' }
+    }),
+    new Response('', { status: 429 }),
+    new TypeError('Load failed')
+  ]
+  requests = []
+  globalThis.fetch = Object.assign(
+    async (input: string | URL | Request) => {
+      requests.push(new URL(input instanceof Request ? input.url : input))
+      const next = answers.shift()
+      if (!next || next instanceof Error) throw next ?? new Error('no answer')
+      return next
+    },
+    { preconnect: realFetch.preconnect }
+  )
+  expect(await checkStockPhotoKey('unsplash', 'good')).toBe('ok')
+  expect(await checkStockPhotoKey('unsplash', 'bad')).toBe('rejected')
+  expect(await checkStockPhotoKey('unsplash', 'busy')).toBe('rate-limited')
+  expect(await checkStockPhotoKey('pexels', 'busy')).toBe('rate-limited')
+  expect(await checkStockPhotoKey('pexels', 'offline')).toBe('network')
+  expect(requests.map((url) => url.pathname)).toEqual([
+    '/photos',
+    '/photos',
+    '/photos',
+    '/v1/curated',
+    '/v1/curated'
+  ])
 })

@@ -155,6 +155,9 @@ const unsplashSearchSchema = v.object({
 })
 type UnsplashPhoto = v.InferOutput<typeof unsplashSearchSchema>['results'][number]
 
+/** How long a use report may take; the photo is already placed, so a slow one is dropped. */
+const REPORT_USE_TIMEOUT_MS = 10_000
+
 /** Unsplash asks for links back to it to name the app they come from. */
 const UNSPLASH_REFERRAL = 'utm_source=openpencil&utm_medium=referral'
 
@@ -220,7 +223,11 @@ const unsplashProvider: StockPhotoProvider = {
   async reportUse(photo) {
     const location = unsplashDownloads.get(photo.sourceId)
     if (!location) return
-    await ofetch(location, { headers: await unsplashHeaders(), retry: 0 })
+    await ofetch(location, {
+      headers: await unsplashHeaders(),
+      retry: 0,
+      timeout: REPORT_USE_TIMEOUT_MS
+    })
   }
 }
 

@@ -65,6 +65,7 @@ export function usePhotoSearch() {
     if (!term || !provider) {
       photos.value = []
       loading.value = false
+      failed.value = false
       hasMore.value = false
       return
     }

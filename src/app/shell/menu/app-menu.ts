@@ -193,12 +193,6 @@ export function useAppMenu() {
     },
     settings: openSettingsDialog,
     variables: () => openVariablesDialog(store),
-    'insert-icon': () => {
-      store.state.iconPickerOpen = true
-    },
-    'insert-photo': () => {
-      store.state.photoPickerOpen = true
-    },
     'export-png': () => exportSelection('png'),
     'export-svg': () => exportSelection('svg'),
     'export-pptx': () => exportSelection('pptx'),

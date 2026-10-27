@@ -281,8 +281,10 @@ function stepValueFromKeyboard(event: KeyboardEvent) {
   if (!requestMutation('step')) return true
   event.preventDefault()
 
-  const draftResult = editing.value
-    ? evaluateNumberExpression(draftValue.value, {
+  // A unit typed after the value stays on it, for the commit to report.
+  const draft = editing.value ? splitUnit(draftValue.value) : undefined
+  const draftResult = draft
+    ? evaluateNumberExpression(draft.value, {
         current: interactionStartValue,
         max,
         mixed: interactionStartedMixed
@@ -298,7 +300,7 @@ function stepValueFromKeyboard(event: KeyboardEvent) {
     max
   )
   updateValue(next)
-  draftValue.value = String(next)
+  draftValue.value = `${next}${draft?.unit ?? ''}`
 
   if (!editing.value) {
     emit('commit', next, interactionStartValue)

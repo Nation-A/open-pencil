@@ -94,6 +94,15 @@ test('a typed % or px switches the unit of line height and letter spacing', asyn
   await expect(page.locator('[data-property="lineHeight"]')).toContainText('%')
   await type('Line height', '30px')
   await expect.poll(() => read('lineHeight')).toEqual({ value: 30, unit: 'PIXELS' })
+  // Stepping a typed value keeps the unit typed after it.
+  const lineHeight = page.getByRole('spinbutton', { name: 'Line height', exact: true })
+  await lineHeight.focus()
+  await lineHeight.fill('150%')
+  await lineHeight.press('ArrowUp')
+  await lineHeight.press('Enter')
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 151, unit: 'PERCENT' })
+  await type('Line height', '30px')
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 30, unit: 'PIXELS' })
   await type('Letter spacing', '2%')
   await expect.poll(() => read('letterSpacing')).toEqual({ value: 2, unit: 'PERCENT' })
 
@@ -101,5 +110,5 @@ test('a typed % or px switches the unit of line height and letter spacing', asyn
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
   await expect.poll(() => read('letterSpacing')).toEqual({ value: 0, unit: 'PIXELS' })
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
-  await expect.poll(() => read('lineHeight')).toEqual({ value: 150, unit: 'PERCENT' })
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 151, unit: 'PERCENT' })
 })

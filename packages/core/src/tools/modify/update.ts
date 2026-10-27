@@ -58,8 +58,10 @@ export const updateNode = defineTool({
       updated.push('y')
     }
     if (args.width !== undefined || args.height !== undefined) {
+      const before = { width: node.width, height: node.height }
       node.resize(args.width ?? node.width, args.height ?? node.height)
-      updated.push('size')
+      // A layer inside an instance keeps its size, as in Figma, so only a resize that took is reported.
+      if (node.width !== before.width || node.height !== before.height) updated.push('size')
     }
     if (args.opacity !== undefined) {
       node.opacity = args.opacity

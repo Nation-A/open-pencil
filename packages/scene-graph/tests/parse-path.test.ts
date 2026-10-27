@@ -36,4 +36,16 @@ describe('parseSVGPath', () => {
     expect(network.vertices).toHaveLength(8)
     expect(network.segments.at(-1)?.end).toBe(0)
   })
+
+  test('keeps the point a subpath ended on when other segments use it', () => {
+    const network = parseSVGPath('M0 0L5 5L0.0001 0L5 5L0.0001 0Z')
+
+    expect(network.vertices).toHaveLength(3)
+    expect(network.segments.map(({ start, end }) => [start, end])).toEqual([
+      [0, 1],
+      [1, 2],
+      [2, 1],
+      [1, 0]
+    ])
+  })
 })

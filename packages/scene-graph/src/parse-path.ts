@@ -63,6 +63,8 @@ function parsePath(
   let cy = 0
 
   const vertexMap = new Map<string, number>()
+  /** How many segment ends sit on each vertex. */
+  const uses: number[] = []
 
   function getOrCreateVertex(x: number, y: number): number {
     const key = `${x},${y}`
@@ -86,6 +88,8 @@ function parsePath(
   ): void {
     const startIdx = getOrCreateVertex(x1, y1)
     const endIdx = getOrCreateVertex(x2, y2)
+    uses[startIdx] = (uses[startIdx] ?? 0) + 1
+    uses[endIdx] = (uses[endIdx] ?? 0) + 1
     const segIdx = segments.length
     segments.push({
       start: startIdx,
@@ -117,7 +121,7 @@ function parsePath(
 
   /**
    * A subpath that ends a hair off its start, as an arc turned into curves does, ends on the start
-   * vertex, as Figma merges them; the point it ended on goes when nothing else uses it.
+   * vertex, as Figma merges them; the point it ended on goes when no other segment uses it.
    */
   function closeOnStart(subPath: SubPath): void {
     const lastIndex = subPath.segmentIndices.at(-1)
@@ -126,12 +130,14 @@ function parsePath(
     if (last.end === subPath.startVertexIndex) return
     const stray = last.end
     last.end = subPath.startVertexIndex
-    const used = segments.some((segment) => segment.start === stray || segment.end === stray)
-    if (used || stray !== vertices.length - 1) return
+    uses[subPath.startVertexIndex] += 1
+    uses[stray] -= 1
+    // Only the newest vertex can go without renumbering the others.
+    if (uses[stray] > 0 || stray !== vertices.length - 1) return
+    const point = vertices[stray]
     vertices.pop()
-    vertexMap.forEach((index, key) => {
-      if (index === stray) vertexMap.delete(key)
-    })
+    uses.pop()
+    vertexMap.delete(`${point.x},${point.y}`)
   }
 
   const parsed = svgpath(d)

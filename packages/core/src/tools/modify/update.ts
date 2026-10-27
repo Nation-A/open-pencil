@@ -16,6 +16,20 @@ function sizing(node: FigmaNodeProxy) {
   }
 }
 
+/**
+ * Resizes a layer and names what the resize changed: a layer inside an instance keeps its size,
+ * as in Figma, and an auto layout frame given its own size still stops hugging.
+ */
+function resized(node: FigmaNodeProxy, width = node.width, height = node.height): string[] {
+  const before = sizing(node)
+  node.resize(width, height)
+  const after = sizing(node)
+  const changed = after.width !== before.width || after.height !== before.height ? ['size'] : []
+  for (const key of ['layoutSizingHorizontal', 'layoutSizingVertical'] as const)
+    if (after[key] !== before[key]) changed.push(key)
+  return changed
+}
+
 export const updateNode = defineTool({
   name: 'update_node',
 
@@ -68,16 +82,8 @@ export const updateNode = defineTool({
       node.y = args.y
       updated.push('y')
     }
-    if (args.width !== undefined || args.height !== undefined) {
-      const before = sizing(node)
-      node.resize(args.width ?? node.width, args.height ?? node.height)
-      // Only what the resize changed is reported: a layer inside an instance keeps its size, as in
-      // Figma, and an auto layout frame given its own size still stops hugging.
-      const after = sizing(node)
-      if (after.width !== before.width || after.height !== before.height) updated.push('size')
-      for (const key of ['layoutSizingHorizontal', 'layoutSizingVertical'] as const)
-        if (after[key] !== before[key]) updated.push(key)
-    }
+    if (args.width !== undefined || args.height !== undefined)
+      updated.push(...resized(node, args.width, args.height))
     if (args.opacity !== undefined) {
       node.opacity = args.opacity
       updated.push('opacity')

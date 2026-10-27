@@ -18,8 +18,8 @@ const styles = computed(() => {
   }
 })
 
-// On the desktop, `useExternalLinks` opens the link in the system browser, as it does every link
-// that opens a new tab.
+// On the desktop the shell opens the link in the system browser, as it does every link that opens
+// a new tab (`useExternalLinks`).
 </script>
 
 <template>

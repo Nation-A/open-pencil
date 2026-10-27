@@ -4,14 +4,12 @@ import { isTauri } from '@/app/tauri/env'
 
 import { openExternalLink } from './ui'
 
-const EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:', 'tel:'])
-
 /**
- * Opens every link meant for a new tab, `<a target="_blank">`, in the system browser on the
- * desktop. A WebView cannot open one itself, and the shell plugin's own handler for such links
- * needs `shell:allow-open`, which the app does not grant: it opens pages through its
- * `open_external_url` command instead. Listening while the click is captured runs before the
- * plugin's handler on `<body>`, which then never sees the click.
+ * Opens links meant for a new tab, `<a target="_blank">`, in the system browser on the desktop,
+ * after the link's own handlers. The shell plugin's handler on `<body>` would open them with
+ * `shell:allow-open`, which the app does not grant, even when the link handles its click itself,
+ * as a chat link does to ask first; such a link opens with `window.open`, which the desktop shell
+ * sends to the browser (`open_new_window_externally` in `desktop/src/system/opener.rs`).
  */
 export function useExternalLinks() {
   if (!isTauri()) return
@@ -22,10 +20,17 @@ export function useExternalLinks() {
       if (!(event.target instanceof Element)) return
       const anchor = event.target.closest('a[href]')
       if (!(anchor instanceof HTMLAnchorElement) || anchor.target !== '_blank') return
-      if (!EXTERNAL_SCHEMES.has(new URL(anchor.href).protocol)) return
-      event.preventDefault()
-      event.stopPropagation()
-      void openExternalLink(anchor.href)
+      // Added while the click is captured, it runs after the link's own handlers in this click.
+      anchor.addEventListener(
+        'click',
+        (click) => {
+          click.stopPropagation()
+          if (click.defaultPrevented) return
+          click.preventDefault()
+          void openExternalLink(anchor.href)
+        },
+        { once: true }
+      )
     },
     { capture: true }
   )

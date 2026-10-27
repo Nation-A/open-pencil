@@ -516,8 +516,9 @@
   "insertPhotoFailed": "无法插入照片。",
   "photoService": "照片服务",
   "photoCredit": "{photographer} 拍摄，来自 {service}",
-  "photoKeyHeading": "使用你自己的密钥搜索 {service}",
-  "photoKeyDescription": "{service} 的照片可免费使用，其 API 密钥也免费，并保存在此设备上。",
+  "photoKeyHeading": "连接 {service}",
+  "photoKeyDescription": "{service} 的照片可免费使用。在设置中添加其免费 API 密钥即可在此搜索。",
+  "photoKeyAction": "打开设置",
   "iconResultCount": {
     "many": "{count} 个结果"
   },

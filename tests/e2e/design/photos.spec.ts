@@ -82,18 +82,36 @@ async function openPicker(page: Page) {
   return dialog
 }
 
+/**
+ * Follows the picker's Open Settings to Settings › Media, saves `service`'s key there, and comes
+ * back to the picker.
+ */
+async function addKeyInSettings(page: Page, service: 'Unsplash' | 'Pexels', label: string) {
+  const picker = page.getByRole('dialog', { name: 'Stock photo' })
+  await expect(page.getByTestId('photo-picker-key-needed')).toContainText(`Connect ${service}`)
+  await picker.getByRole('button', { name: 'Open Settings' }).click()
+  await expect(picker).toBeHidden()
+  const media = page.getByTestId('settings-media-panel')
+  await media.getByRole('button', { name: new RegExp(service) }).click()
+  await page.getByLabel(label).fill(`${service.toLowerCase()}-key`)
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('app-settings-done').click()
+  await page.getByTestId('fill-picker-swatch').first().click()
+  await page.getByTestId('fill-picker-stock-photo').click()
+  await expect(picker).toBeVisible()
+  return picker
+}
+
 /** The selected layer's image fill, or none. */
 async function imageFill(page: Page) {
   const node = await getSelectedNode(page)
   return node?.fills.find((fill) => fill.type === 'IMAGE')
 }
 
-test('Stock photo asks for a service key in place, then fills the layer with the photo picked', async () => {
+test('Stock photo sends a missing key to Settings, then fills the layer with the photo picked', async () => {
   const page = ctx.page
-  const dialog = await openPicker(page)
-  await expect(dialog.getByRole('textbox', { name: 'Search photos...' })).toBeHidden()
-  await dialog.getByLabel('Access key').fill('unsplash-key')
-  await dialog.getByRole('button', { name: 'Save' }).click()
+  await openPicker(page)
+  const dialog = await addKeyInSettings(page, 'Unsplash', 'Access key')
 
   await dialog.getByRole('textbox', { name: 'Search photos...' }).fill('mountains')
   await expect(dialog.getByRole('option')).toHaveCount(2)
@@ -110,12 +128,10 @@ test('Stock photo asks for a service key in place, then fills the layer with the
 
 test('switching to a service without a key asks for that one, and its photo fills the layer', async () => {
   const page = ctx.page
-  const dialog = await openPicker(page)
-  await dialog.getByRole('combobox', { name: 'Photo service' }).click()
+  const picker = await openPicker(page)
+  await picker.getByRole('combobox', { name: 'Photo service' }).click()
   await page.getByRole('option', { name: 'Pexels' }).click()
-  await expect(dialog.getByLabel('API key')).toBeVisible()
-  await dialog.getByLabel('API key').fill('pexels-key')
-  await dialog.getByRole('button', { name: 'Save' }).click()
+  const dialog = await addKeyInSettings(page, 'Pexels', 'API key')
 
   await dialog.getByRole('textbox', { name: 'Search photos...' }).fill('forest')
   await dialog.getByRole('option').first().click()

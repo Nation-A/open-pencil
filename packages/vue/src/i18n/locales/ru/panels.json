@@ -528,8 +528,9 @@
   "insertPhotoFailed": "Не удалось вставить фото.",
   "photoService": "Фотосервис",
   "photoCredit": "Фото: {photographer}, {service}",
-  "photoKeyHeading": "Поиск на {service} со своим ключом",
-  "photoKeyDescription": "Фото с {service} можно использовать бесплатно. API-ключ тоже бесплатный и хранится на этом устройстве.",
+  "photoKeyHeading": "Подключить {service}",
+  "photoKeyDescription": "Фото с {service} можно использовать бесплатно. Добавьте бесплатный API-ключ в Настройках, чтобы искать их здесь.",
+  "photoKeyAction": "Открыть настройки",
   "iconResultCount": {
     "one": "{count} результат",
     "few": "{count} результата",

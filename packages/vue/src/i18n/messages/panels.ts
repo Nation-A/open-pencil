@@ -621,12 +621,13 @@ export const panelMessageDefaults = {
   photoSearchFailed: params('{service} could not be searched. Check your connection and key.'),
   insertPhotoFailed: 'The photo could not be inserted.',
   photoService: 'Photo service',
-  /** A placed photo's layer name and the picker's credit, as the services ask to be credited. */
+  /** The picker's credit for a photo, as the services ask to be credited. */
   photoCredit: params('Photo by {photographer} on {service}'),
-  photoKeyHeading: params('Search {service} with your own key'),
+  photoKeyHeading: params('Connect {service}'),
   photoKeyDescription: params(
-    '{service} photos are free to use. Its API key is free too, and stays on this device.'
+    '{service} photos are free to use. Add its free API key in Settings to search them here.'
   ),
+  photoKeyAction: 'Open Settings',
   iconResultCount: count({ one: '{count} result', many: '{count} results' }),
   /** More icons match than a search returns. */
   iconResultCountCapped: params('{count}+ results'),

@@ -516,8 +516,9 @@
   "insertPhotoFailed": "写真を挿入できませんでした。",
   "photoService": "写真サービス",
   "photoCredit": "{photographer} による写真（{service}）",
-  "photoKeyHeading": "自分のキーで {service} を検索",
-  "photoKeyDescription": "{service} の写真は無料で使えます。API キーも無料で、このデバイスに保存されます。",
+  "photoKeyHeading": "{service} を接続",
+  "photoKeyDescription": "{service} の写真は無料で使えます。設定で無料の API キーを追加すると、ここで検索できます。",
+  "photoKeyAction": "設定を開く",
   "iconResultCount": {
     "many": "{count} 件の結果"
   },

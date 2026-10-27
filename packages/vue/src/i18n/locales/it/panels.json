@@ -522,8 +522,9 @@
   "insertPhotoFailed": "Impossibile inserire la foto.",
   "photoService": "Servizio di foto",
   "photoCredit": "Foto di {photographer} su {service}",
-  "photoKeyHeading": "Cerca su {service} con la tua chiave",
-  "photoKeyDescription": "Le foto di {service} sono gratuite. Anche la chiave API è gratuita e resta su questo dispositivo.",
+  "photoKeyHeading": "Collega {service}",
+  "photoKeyDescription": "Le foto di {service} sono gratuite. Aggiungi la sua chiave API gratuita nelle Impostazioni per cercarle qui.",
+  "photoKeyAction": "Apri Impostazioni",
   "iconResultCount": {
     "one": "{count} risultato",
     "many": "{count} risultati"

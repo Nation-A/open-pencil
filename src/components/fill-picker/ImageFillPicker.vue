@@ -101,34 +101,48 @@ function rotate() {
 
 <template>
   <div class="space-y-2">
+    <!--
+      As Figma's image fill: the image, with its actions in the middle. With no image they show at
+      once; over an image they show on hover or when the keyboard reaches them.
+    -->
     <div
-      v-if="imagePreviewURL"
-      class="flex h-24 items-center justify-center overflow-hidden rounded border border-border"
+      class="group relative flex h-28 items-center justify-center overflow-hidden rounded border border-border bg-panel-secondary"
+      :data-empty="imagePreviewURL ? undefined : ''"
+      data-test-id="fill-picker-image-well"
     >
-      <img :src="imagePreviewURL" class="max-h-full max-w-full object-contain" />
-    </div>
-    <div class="flex gap-1.5">
-      <AppButton
-        variant="outline"
-        class="min-w-0 flex-1"
-        data-test-id="fill-picker-choose-image"
-        @click="pickImage()"
+      <img
+        v-if="imagePreviewURL"
+        :src="imagePreviewURL"
+        alt=""
+        class="max-h-full max-w-full object-contain"
+      />
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100 group-data-[empty]:bg-transparent group-data-[empty]:opacity-100 has-[:focus-visible]:opacity-100 motion-reduce:transition-none"
       >
-        <template #leading><icon-lucide-image class="size-3" /></template>
-        {{ fill.imageHash ? 'Replace' : 'Choose image' }}
-      </AppButton>
-      <PhotoPicker :heading="panels.stockPhoto" @select="fillWithPhoto">
-        <template #trigger>
-          <AppButton
-            variant="outline"
-            class="min-w-0 flex-1"
-            data-test-id="fill-picker-stock-photo"
-          >
-            <template #leading><icon-lucide-image-plus class="size-3" /></template>
-            {{ panels.stockPhoto }}
-          </AppButton>
-        </template>
-      </PhotoPicker>
+        <AppButton
+          size="sm"
+          variant="outline"
+          class="w-32 bg-panel"
+          data-test-id="fill-picker-choose-image"
+          @click="pickImage()"
+        >
+          <template #leading><icon-lucide-upload class="size-3" /></template>
+          {{ fill.imageHash ? 'Replace' : 'Choose image' }}
+        </AppButton>
+        <PhotoPicker :heading="panels.stockPhoto" @select="fillWithPhoto">
+          <template #trigger>
+            <AppButton
+              size="sm"
+              variant="outline"
+              class="w-32 bg-panel"
+              data-test-id="fill-picker-stock-photo"
+            >
+              <template #leading><icon-lucide-image-plus class="size-3" /></template>
+              {{ panels.stockPhoto }}
+            </AppButton>
+          </template>
+        </PhotoPicker>
+      </div>
     </div>
     <div class="flex items-center gap-1.5">
       <AppSelect

@@ -6,12 +6,13 @@ import { useCommonMessages, usePanelMessages } from '@open-pencil/vue/i18n'
 
 import { PHOTO_SERVICES, usePhotoSearch, type PhotoService } from '@/app/editor/photos/search'
 import { refreshMediaCredentials } from '@/app/settings/credentials/media'
+import { openSettingsDialog } from '@/app/settings/dialog'
 import SettingsLink from '@/components/settings/layout/SettingsLink.vue'
+import AppButton from '@/components/ui/button/AppButton.vue'
+import AppPlaceholder from '@/components/ui/feedback/AppPlaceholder.vue'
 import AppPicker from '@/components/ui/select/AppPicker.vue'
 import type { AppPickerItem } from '@/components/ui/select/AppPicker.vue'
 import AppSelect from '@/components/ui/select/AppSelect.vue'
-
-import PhotoKeySetup from './PhotoKeySetup.vue'
 
 /**
  * Searches Unsplash or Pexels and hands back the photo picked, crediting each as the services
@@ -62,6 +63,12 @@ const emptyLabel = computed(() => {
     : panels.value.photoSearchHint({ service: serviceName.value })
 })
 
+/** The keys are set where every service's are, in Settings, with room to read and paste. */
+function openKeySettings() {
+  open.value = false
+  openSettingsDialog('media')
+}
+
 function pick(id: string) {
   const photo = search.find(id)
   if (photo) emit('select', photo, service.value, serviceName.value)
@@ -74,6 +81,7 @@ function pick(id: string) {
     v-model:query="query"
     search="remote"
     layout="gallery"
+    :ui="hasKey ? undefined : { content: 'h-auto' }"
     :has-more="hasMore"
     :loading="loading"
     :heading="heading"
@@ -105,7 +113,18 @@ function pick(id: string) {
       />
     </template>
     <template v-if="!hasKey" #setup>
-      <PhotoKeySetup :key="service" :service="service" />
+      <AppPlaceholder
+        :label="panels.photoKeyHeading({ service: serviceName })"
+        :description="panels.photoKeyDescription({ service: serviceName })"
+        data-test-id="photo-picker-key-needed"
+      >
+        <template #icon><icon-lucide-key-round class="size-5" /></template>
+        <template #action>
+          <AppButton color="primary" variant="solid" @click="openKeySettings">{{
+            panels.photoKeyAction
+          }}</AppButton>
+        </template>
+      </AppPlaceholder>
     </template>
     <template #leading="{ item: entry }">
       <img

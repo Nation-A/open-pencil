@@ -758,6 +758,51 @@ function drawRegularStroke(
   }
 }
 
+/**
+ * Strokes a vector's paths on the side its alignment takes, as a shape's stroke is: a centred
+ * stroke twice as wide, kept inside the paths for `INSIDE` and outside them for `OUTSIDE`.
+ */
+function drawAlignedVectorPathStrokes(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  node: SceneNode,
+  vectorPaths: Path[],
+  stroke: SceneNode['strokes'][0],
+  sc: Color
+): void {
+  if (stroke.align === 'CENTER') {
+    const outlineKey = strokeOutlineKey(node, stroke, 'regions')
+    drawVectorPathStrokes(r, canvas, vectorPaths, stroke, sc, node.strokeMiterLimit, outlineKey)
+    return
+  }
+  const doubled = { ...stroke, weight: stroke.weight * 2 }
+  const outlineKey = strokeOutlineKey(node, doubled, 'regions')
+  canvas.save()
+  if (stroke.align === 'INSIDE') {
+    const inside = unitePaths(r, vectorPaths)
+    if (inside) {
+      canvas.clipPath(inside, r.ck.ClipOp.Intersect, true)
+      inside.delete()
+    }
+  } else {
+    for (const path of vectorPaths) canvas.clipPath(path, r.ck.ClipOp.Difference, true)
+  }
+  drawVectorPathStrokes(r, canvas, vectorPaths, doubled, sc, node.strokeMiterLimit, outlineKey)
+  canvas.restore()
+}
+
+/** One path covering every path given, which a clip can keep the inside of. */
+function unitePaths(r: SkiaRenderer, paths: Path[]): Path | null {
+  let united: Path | null = paths[0]?.copy() ?? null
+  for (const path of paths.slice(1)) {
+    if (!united) break
+    const next = r.ck.Path.MakeFromOp(united, path, r.ck.PathOp.Union)
+    united.delete()
+    united = next
+  }
+  return united
+}
+
 function drawNodeStroke(
   r: SkiaRenderer,
   canvas: Canvas,
@@ -780,10 +825,8 @@ function drawNodeStroke(
     return
   }
   if (!sg) {
-    if (vectorPaths) {
-      const outlineKey = strokeOutlineKey(node, stroke, 'regions')
-      drawVectorPathStrokes(r, canvas, vectorPaths, stroke, sc, node.strokeMiterLimit, outlineKey)
-    } else drawRegularStroke(r, canvas, node, stroke, sc)
+    if (vectorPaths) drawAlignedVectorPathStrokes(r, canvas, node, vectorPaths, stroke, sc)
+    else drawRegularStroke(r, canvas, node, stroke, sc)
     return
   }
   if (stroke.align !== 'INSIDE') {

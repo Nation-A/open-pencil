@@ -69,6 +69,11 @@ function openKeySettings() {
   openSettingsDialog('media')
 }
 
+/** Both services ask for the credit to link to the photographer's page with the service. */
+function photographerURL(id: string) {
+  return search.find(id)?.photographerURL ?? serviceInfo.value?.siteURL ?? ''
+}
+
 function pick(id: string) {
   const photo = search.find(id)
   if (photo) emit('select', photo, service.value, serviceName.value)
@@ -137,7 +142,9 @@ function pick(id: string) {
     </template>
     <template v-if="hasKey" #footer="{ highlighted }">
       <p class="flex h-5 items-center gap-1 truncate px-1 text-[11px] text-muted">
-        <span v-if="highlighted" class="truncate">{{ highlighted.label }}</span>
+        <SettingsLink v-if="highlighted" :href="photographerURL(highlighted.value)">{{
+          highlighted.label
+        }}</SettingsLink>
         <SettingsLink v-else-if="serviceInfo" :href="serviceInfo.siteURL">{{
           serviceName
         }}</SettingsLink>

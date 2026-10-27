@@ -92,6 +92,14 @@ export function usePhotoSearch() {
     }
   }
 
+  // Another service's photos must not stay pickable while the new search waits out the
+  // debounce: they would be placed and reported as the new service's.
+  watch(service, () => {
+    generation++
+    photos.value = []
+    hasMore.value = false
+    failed.value = false
+  })
   // Placeholders show from the first keystroke, not only once the search goes out.
   watch([query, service], () => {
     if (query.value.trim() && hasKey.value) loading.value = true

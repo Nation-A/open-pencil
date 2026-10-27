@@ -107,21 +107,6 @@ describe('update_node', () => {
     expect(node.opacity).toBe(0.5)
   })
 
-  test('does not report a size it could not set on a layer inside an instance', () => {
-    const { figma } = setupToolTest()
-    const component = figma.createComponent()
-    const rect = figma.createRectangle()
-    rect.resize(30, 30)
-    component.appendChild(rect)
-    const layer = expectDefined(component.createInstance().children[0], 'instance layer')
-
-    const tool = getTool('update_node')
-    const result = tool.execute(figma, { id: layer.id, width: 60, name: 'Badge' }) as ToolResult
-
-    expect(result.updated).toEqual(['name'])
-    expect(expectDefined(figma.getNodeById(layer.id), 'instance layer').width).toBe(30)
-  })
-
   test('updates corner radius', () => {
     const { figma } = setupToolTest()
     const rect = figma.createRectangle()

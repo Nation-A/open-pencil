@@ -3,7 +3,18 @@ import * as v from 'valibot'
 import type { SceneNode } from '@open-pencil/scene-graph'
 
 import { assertNodeEditable } from '#core/editor/capabilities'
+import type { FigmaNodeProxy } from '#core/figma-api'
 import { toolNumber, nodeIdInputSchema, defineTool, nodeNotFound } from '#core/tools/schema'
+
+/** The size of a layer and how auto layout sizes it, which a resize may change. */
+function sizing(node: FigmaNodeProxy) {
+  return {
+    width: node.width,
+    height: node.height,
+    layoutSizingHorizontal: node.layoutSizingHorizontal,
+    layoutSizingVertical: node.layoutSizingVertical
+  }
+}
 
 export const updateNode = defineTool({
   name: 'update_node',
@@ -58,10 +69,14 @@ export const updateNode = defineTool({
       updated.push('y')
     }
     if (args.width !== undefined || args.height !== undefined) {
-      const before = { width: node.width, height: node.height }
+      const before = sizing(node)
       node.resize(args.width ?? node.width, args.height ?? node.height)
-      // A layer inside an instance keeps its size, as in Figma, so only a resize that took is reported.
-      if (node.width !== before.width || node.height !== before.height) updated.push('size')
+      // Only what the resize changed is reported: a layer inside an instance keeps its size, as in
+      // Figma, and an auto layout frame given its own size still stops hugging.
+      const after = sizing(node)
+      if (after.width !== before.width || after.height !== before.height) updated.push('size')
+      for (const key of ['layoutSizingHorizontal', 'layoutSizingVertical'] as const)
+        if (after[key] !== before[key]) updated.push(key)
     }
     if (args.opacity !== undefined) {
       node.opacity = args.opacity

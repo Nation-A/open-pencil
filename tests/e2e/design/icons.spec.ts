@@ -217,10 +217,10 @@ test('Object › Insert Icon opens the picker while its button is hidden from th
     await page.getByRole('menuitem', { name: 'Customize toolbar…' }).click()
     return page.getByTestId('settings-toolbar-panel')
   }
-  const settings = await customizeToolbar()
-  await settings.getByRole('switch', { name: 'Show Insert icon', exact: true }).click()
-  await page.getByTestId('app-settings-done').click()
   try {
+    const settings = await customizeToolbar()
+    await settings.getByRole('switch', { name: 'Show Insert icon', exact: true }).click()
+    await page.getByTestId('app-settings-done').click()
     await expect(page.getByRole('button', { name: 'Insert icon' })).toHaveCount(0)
 
     const menu = await openAppMenu(page, 'Object')

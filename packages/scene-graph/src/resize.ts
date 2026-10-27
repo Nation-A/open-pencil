@@ -300,7 +300,11 @@ export function scaledGeometryChanges(
   if (orig.fillGeometry.length > 0) {
     changes.fillGeometry = scaleGeometryPaths(orig.fillGeometry, sx, sy)
   }
-  if (orig.strokeGeometry.length > 0) {
+  // A stroke keeps its weight through a resize, as in Figma: a path's saved stroke outline goes,
+  // so the stroke draws from the scaled path, where scaling the outline would squash it.
+  if ((orig.vectorNetwork?.vertices.length ?? 0) > 0) {
+    if (orig.strokeGeometry.length > 0) changes.strokeGeometry = []
+  } else if (orig.strokeGeometry.length > 0) {
     changes.strokeGeometry = scaleGeometryPaths(orig.strokeGeometry, sx, sy)
   }
   // Path text scales with its path, including baked path text that kept only rotated glyphs;
@@ -321,9 +325,8 @@ export function scaledGeometryChanges(
         height: orig.textPathBox.height * sy
       }
     }
-  }
-  if (orig.strokes.length > 0) {
-    changes.strokes = scaleStrokes(orig.strokes, sx, sy)
+    // Glyphs scaled as a picture take their strokes along.
+    if (orig.strokes.length > 0) changes.strokes = scaleStrokes(orig.strokes, sx, sy)
   }
   return changes
 }

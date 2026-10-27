@@ -234,11 +234,12 @@ function snapshotResizeFinal(node: SceneNode): Partial<SceneNode> {
   }
   if (node.vectorNetwork) final.vectorNetwork = cloneVectorNetwork(node.vectorNetwork)
   if (node.fillGeometry.length > 0) final.fillGeometry = copyGeometryPaths(node.fillGeometry)
-  // Path-text reflow legitimately EMPTIES strokeGeometry (textPathBox marks
-  // those nodes) — commit it so the pre-resize silhouettes don't resurrect.
+  // Path-text reflow and a resized path legitimately EMPTY strokeGeometry (textPathBox and a
+  // vector network mark those nodes) — commit it so the pre-resize outlines don't resurrect.
   // Everything else keeps the length guard: a spurious strokeGeometry key on
   // plain nodes would clear their raw Figma payload on commit.
-  if (node.strokeGeometry.length > 0 || node.textPathBox) {
+  const strokesPath = (node.vectorNetwork?.vertices.length ?? 0) > 0
+  if (node.strokeGeometry.length > 0 || node.textPathBox || strokesPath) {
     final.strokeGeometry = copyGeometryPaths(node.strokeGeometry)
   }
   if (node.derivedTextGlyphs?.length) {

@@ -1,1 +1,1 @@
-- A script resizing a layer inside an instance leaves it as it is, as in Figma, instead of recording a size Figma drops, and `resize()` keeps every layer at least 0.0001 wide and high.
+- A script resizing a layer inside an instance leaves it as it is, as in Figma, instead of recording a size Figma drops, and `resize()` keeps every side at least 0.0001, except a line's height of 0.

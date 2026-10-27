@@ -58,9 +58,11 @@ const keyCheckStatus = computed(() => {
   if (keyCheck.value === 'checking') return 'testing'
   return keyCheck.value === 'ok' ? 'success' : 'error'
 })
-const keyCheckFailure = computed(() => {
+const keyCheckMessage = computed(() => {
   const service = title.value
   switch (keyCheck.value) {
+    case 'ok':
+      return media.value.photoKeyWorks({ service })
     case 'missing':
       return ai.value.connectionTestMissingAPIKey
     case 'rejected':
@@ -118,7 +120,7 @@ async function save() {
           <ProviderConnectionTestButton
             v-if="service !== 'vectorize'"
             :status="keyCheckStatus"
-            :failure="keyCheckFailure"
+            :message="keyCheckMessage"
             :disabled="busy"
             @test="checkKey"
           />

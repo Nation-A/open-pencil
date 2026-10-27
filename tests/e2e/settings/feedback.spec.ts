@@ -145,6 +145,7 @@ test('Test connection tries the photo key typed against the service and says wha
   )
   await page.getByLabel('Access key').fill('working-key')
   await test.click()
+  await expect(result).toHaveText('Unsplash accepted this key.')
   await expect(result).toHaveAttribute('data-tone', 'success')
 })
 

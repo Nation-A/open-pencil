@@ -13,6 +13,7 @@ export const mediaMessageDefaults = {
   pexelsAlternativeOptional: 'Optional — alternative to Pexels',
   getPexelsAPIKey: 'Get free Pexels API key →',
   getUnsplashAccessKey: 'Get free Unsplash access key →',
+  photoKeyWorks: params('{service} accepted this key.'),
   photoKeyRejected: params('{service} refused this key. Check that you copied all of it.'),
   unsplashKeyRejected:
     'Unsplash refused this key. Paste your app’s Access Key, not its Secret key.',

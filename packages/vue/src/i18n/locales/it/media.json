@@ -8,6 +8,7 @@
   "pexelsAlternativeOptional": "Facoltativo — fonte alternativa di foto stock",
   "getPexelsAPIKey": "Ottieni una chiave API Pexels gratuita →",
   "getUnsplashAccessKey": "Ottieni una chiave di accesso Unsplash gratuita →",
+  "photoKeyWorks": "{service} ha accettato questa chiave.",
   "photoKeyRejected": "{service} ha rifiutato questa chiave. Controlla di averla copiata per intero.",
   "unsplashKeyRejected": "Unsplash ha rifiutato questa chiave. Incolla l’Access Key della tua app, non la Secret key.",
   "photoKeyRateLimited": "Questa chiave ha esaurito le richieste a {service} per quest’ora. Riprova più tardi.",

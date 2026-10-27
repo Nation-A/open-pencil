@@ -1,0 +1,3 @@
+- Resizing a layer on the canvas keeps its stroke weight, as in Figma.
+- An SVG rounded rectangle imports with its outline closed on its first point, as in Figma, instead of an extra point that left it open.
+- Typing `%` or `px` after a line height or letter spacing switches its unit.

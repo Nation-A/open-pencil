@@ -29,6 +29,7 @@ import {
   type NodeProxyInternals,
   type ProxyThis
 } from '#core/figma-api/accessor-utils'
+import { invalid, numberProblem } from '#core/figma-api/accessors/text/messages'
 import { flushPendingLayout } from '#core/figma-api/pending-layout'
 import type { NodeProxyHost } from '#core/figma-api/proxy'
 import { computeAbsoluteRenderBounds } from '#core/figma-api/render-bounds'
@@ -292,21 +293,36 @@ function resizedVectorGeometry(node: SceneNode, width: number, height: number): 
   return { ...geometry, strokeGeometry: [] }
 }
 
-/** The least size Figma's `resize` gives a vector side; `resizeWithoutConstraints` allows zero. */
-const MIN_VECTOR_RESIZE = 0.0001
+/** The least size Figma's `resize` gives a side; `resizeWithoutConstraints` allows zero. */
+const MIN_RESIZE = 0.0001
 
-/** The size a resize gives a node: a vector cannot become 0×0, and `resize` keeps its sides above zero. */
+/**
+ * The size a resize gives a node, as Figma's does: it refuses a side that is not a number or is
+ * negative, and a vector cannot become 0×0. `resize` keeps the sides above zero, except a line's
+ * height of zero, which is the height a line has.
+ */
 function resizedSize(
   node: SceneNode,
   width: number,
   height: number,
   constrained: boolean
 ): { width: number; height: number } {
-  if (node.type !== 'VECTOR') return { width, height }
-  if (width === 0 && height === 0)
+  const method = constrained ? 'resize' : 'resizeWithoutConstraints'
+  for (const [property, value] of [
+    ['width', width],
+    ['height', height]
+  ] as const) {
+    const problem =
+      numberProblem(value) ?? (value < 0 ? 'Too small: expected number to be >=0' : null)
+    if (problem) throw invalid(method, problem, property)
+  }
+  if (node.type === 'VECTOR' && width === 0 && height === 0)
     throw new Error('Cannot set width and height of vector node to zero')
   if (!constrained) return { width, height }
-  return { width: Math.max(width, MIN_VECTOR_RESIZE), height: Math.max(height, MIN_VECTOR_RESIZE) }
+  return {
+    width: Math.max(width, MIN_RESIZE),
+    height: node.type === 'LINE' && height === 0 ? 0 : Math.max(height, MIN_RESIZE)
+  }
 }
 
 /**
@@ -326,6 +342,8 @@ function resizeNode(
   const scene = graph(target, internals)
   const node = raw(target, internals)
   const { width, height } = resizedSize(node, requestedWidth, requestedHeight, constrained)
+  // Figma has no size for a layer inside an instance: the resize does nothing, and records nothing.
+  if (node.parentId && findInstanceAncestor(scene, node.parentId)) return
   const before = containerTransform(node, scene)
   const size = { width: node.width, height: node.height }
   // An instance's layers follow its constraints however it is resized, as in Figma.

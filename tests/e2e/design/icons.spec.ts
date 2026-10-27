@@ -212,28 +212,26 @@ test('an edited icon says so, asks before a swap discards the edit, and resets o
 
 test('Object › Insert Icon opens the picker while its button is hidden from the toolbar', async () => {
   const page = ctx.page
-  await page.evaluate(async () => {
-    const path = '/src/app/settings/preferences/store.ts'
-    const store = await import(path)
-    const toolbar = store.appPreferences.value.toolbar
-    store.updateToolbarLayout({ ...toolbar, hidden: [...toolbar.hidden, 'insert-icon'] })
-  })
-  await expect(page.getByRole('button', { name: 'Insert icon' })).toHaveCount(0)
+  const customizeToolbar = async () => {
+    await page.getByTestId('toolbar').click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Customize toolbar…' }).click()
+    return page.getByTestId('settings-toolbar-panel')
+  }
+  const settings = await customizeToolbar()
+  await settings.getByRole('switch', { name: 'Show Insert icon', exact: true }).click()
+  await page.getByTestId('app-settings-done').click()
+  try {
+    await expect(page.getByRole('button', { name: 'Insert icon' })).toHaveCount(0)
 
-  const menu = await openAppMenu(page, 'Object')
-  await menu.getByRole('menuitem', { name: 'Insert Icon…' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Insert icon' })
-  await expect(dialog).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(dialog).toBeHidden()
-
-  await page.evaluate(async () => {
-    const path = '/src/app/settings/preferences/store.ts'
-    const store = await import(path)
-    const toolbar = store.appPreferences.value.toolbar
-    store.updateToolbarLayout({
-      ...toolbar,
-      hidden: toolbar.hidden.filter((entry: string) => entry !== 'insert-icon')
-    })
-  })
+    const menu = await openAppMenu(page, 'Object')
+    await menu.getByRole('menuitem', { name: 'Insert Icon…' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Insert icon' })
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+  } finally {
+    const reset = await customizeToolbar()
+    await reset.getByRole('button', { name: 'Reset to default' }).click()
+    await page.getByTestId('app-settings-done').click()
+  }
 })

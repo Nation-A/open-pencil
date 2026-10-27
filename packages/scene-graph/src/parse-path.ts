@@ -115,6 +115,25 @@ function parsePath(
     addSegment(x1, y1, x2, y2, cp1x, cp1y, cp2x, cp2y)
   }
 
+  /**
+   * A subpath that ends a hair off its start, as an arc turned into curves does, ends on the start
+   * vertex, as Figma merges them; the point it ended on goes when nothing else uses it.
+   */
+  function closeOnStart(subPath: SubPath): void {
+    const lastIndex = subPath.segmentIndices.at(-1)
+    if (lastIndex === undefined) return
+    const last = segments[lastIndex]
+    if (last.end === subPath.startVertexIndex) return
+    const stray = last.end
+    last.end = subPath.startVertexIndex
+    const used = segments.some((segment) => segment.start === stray || segment.end === stray)
+    if (used || stray !== vertices.length - 1) return
+    vertices.pop()
+    vertexMap.forEach((index, key) => {
+      if (index === stray) vertexMap.delete(key)
+    })
+  }
+
   const parsed = svgpath(d)
   const parseError = 'err' in parsed && typeof parsed.err === 'string' ? parsed.err : null
   if (parseError) return { ok: false, error: parseError }
@@ -173,6 +192,8 @@ function parsePath(
         const startVert = vertices[currentSubPath.startVertexIndex]
         if (Math.abs(cx - startVert.x) > 0.001 || Math.abs(cy - startVert.y) > 0.001) {
           addLine(cx, cy, startVert.x, startVert.y)
+        } else {
+          closeOnStart(currentSubPath)
         }
         currentSubPath.closed = true
         cx = startVert.x

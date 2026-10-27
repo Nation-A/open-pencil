@@ -1,5 +1,6 @@
 import { arrowCapOverflow } from './arrow-caps'
 import type { Rect, Vector } from './primitives'
+import { textDecorationOverflow, textLinesOverflow } from './text/overflow'
 import type { Effect, Stroke, StrokeCap, StrokeJoin, VectorNetwork } from './types'
 
 export function degToRad(degrees: number): number {
@@ -296,6 +297,7 @@ export interface VisualBoundsNode {
   textDecoration?: string
   textUnderlineOffset?: number | null
   textDecorationThickness?: number | null
+  derivedTextHeight?: number | null
 }
 
 export function unionVisualBounds(
@@ -409,18 +411,15 @@ export function nodeVisualBounds(
     bounds = unionVisualBounds(bounds, transformedLocalBounds(node, localGeometry, abs)) ?? bounds
   }
 
+  const linesOverflow = textLinesOverflow(node)
+  if (linesOverflow > 0) {
+    const lines = { x: 0, y: 0, width: node.width, height: node.height + linesOverflow }
+    bounds = unionVisualBounds(bounds, transformedLocalBounds(node, lines, abs)) ?? bounds
+  }
+
   bounds.maxY += textDecorationOverflow(node)
 
   return bounds
-}
-
-/** How far a text node's underline or strikethrough reaches below its box. */
-export function textDecorationOverflow(node: VisualBoundsNode): number {
-  if (node.type !== 'TEXT' || !node.textDecoration || node.textDecoration === 'NONE') return 0
-  const fontSize = node.fontSize ?? 14
-  const underlineOffset = node.textUnderlineOffset ?? fontSize * 0.18
-  const thickness = node.textDecorationThickness ?? Math.max(1, fontSize / 16)
-  return underlineOffset + thickness + fontSize * 0.35
 }
 
 function collectDescendantVisualBounds(

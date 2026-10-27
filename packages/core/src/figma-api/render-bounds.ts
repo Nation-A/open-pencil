@@ -9,6 +9,7 @@ import {
 } from '@open-pencil/scene-graph/geometry'
 import Matrix from '@open-pencil/scene-graph/matrix'
 import type { Rect, Vector } from '@open-pencil/scene-graph/primitives'
+import { textLinesOverflow } from '@open-pencil/scene-graph/text'
 
 const INTRINSIC_CONTAINER_TYPES = new Set([
   'FRAME',
@@ -109,6 +110,13 @@ function ownRenderBounds(node: SceneNode, graph: SceneGraph): VisualBounds | nul
           localGeometry.height
         )
       ) ?? bounds
+  }
+
+  // Text lines past a fixed-size box draw, as in Figma.
+  const linesOverflow = textLinesOverflow(node)
+  if (linesOverflow > 0) {
+    const lines = transformedRect(node, graph, 0, 0, node.width, node.height + linesOverflow)
+    bounds = unionVisualBounds(bounds, lines) ?? bounds
   }
 
   for (const effect of node.effects) {

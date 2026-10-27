@@ -21,10 +21,14 @@ function hasTextAutoWidthChange(changes: Partial<SceneNode>): boolean {
   return Object.keys(changes).some((key) => TEXT_AUTO_WIDTH_KEYS.has(key as keyof SceneNode))
 }
 
+type TextSizeChanges = Partial<
+  Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs' | 'derivedTextHeight'>
+>
+
 export function textAutoResizeChanges(
   node: SceneNode | undefined,
   changes: Partial<SceneNode>
-): Partial<Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs'>> {
+): TextSizeChanges {
   if (node?.type !== 'TEXT' || !hasTextAutoResizeChange(changes)) return {}
   // Path text is laid out along its path (derivedTextGlyphs on textPathBox),
   // not by paragraph auto-resize. Running the measurement here would null the
@@ -36,13 +40,17 @@ export function textAutoResizeChanges(
 
   const next = { ...node, ...changes }
   const mode = next.textAutoResize
-  if (mode !== 'HEIGHT' && mode !== 'WIDTH_AND_HEIGHT') return {}
+  // A fixed-size box keeps its size; its lines are measured at its width, since they draw past it.
+  if (mode !== 'HEIGHT' && mode !== 'WIDTH_AND_HEIGHT')
+    return { derivedTextHeight: measureTextForLayout(next, next.width).height || null }
 
   const maxWidth = mode === 'HEIGHT' ? next.width : undefined
   const measured = measureTextForLayout(next, maxWidth)
-  const resized: Partial<
-    Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs'>
-  > = { derivedLayout: null, derivedTextGlyphs: null }
+  const resized: TextSizeChanges = {
+    derivedLayout: null,
+    derivedTextGlyphs: null,
+    derivedTextHeight: null
+  }
 
   if (mode === 'WIDTH_AND_HEIGHT' && hasTextAutoWidthChange(changes) && measured.width > 0)
     resized.width = measured.width
@@ -76,9 +84,12 @@ export function sizeAutoResizingText(
     const resized =
       (changes.width !== undefined && changes.width !== node.width) ||
       (changes.height !== undefined && changes.height !== node.height)
-    if (!resized) continue
-    graph.updateNode(id, changes)
-    changed = true
+    // A fixed-size box only learns how far its lines reach, which needs no layout.
+    const measured =
+      changes.derivedTextHeight !== undefined &&
+      changes.derivedTextHeight !== node.derivedTextHeight
+    if (resized || measured) graph.updateNode(id, changes)
+    changed ||= resized
   }
   return changed
 }

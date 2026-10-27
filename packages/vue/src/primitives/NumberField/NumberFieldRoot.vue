@@ -37,7 +37,8 @@ const {
   ariaLabel,
   disabled: disabledProp = false,
   bound: boundProp = false,
-  editPolicy = 'editable'
+  editPolicy = 'editable',
+  units = []
 } = defineProps<NumberFieldRootProps>()
 const emit = defineEmits<NumberFieldRootEmits>()
 defineSlots<NumberFieldRootSlots>()
@@ -127,7 +128,7 @@ function restoreInteractionValue() {
   }
 }
 
-function finishCommit(value: number) {
+function finishCommit(value: number, unit?: string) {
   updateValue(value)
   editing.value = false
   if (
@@ -135,7 +136,7 @@ function finishCommit(value: number) {
     workingValue.value !== interactionStartValue ||
     interactionStartedMixed
   ) {
-    emit('commit', workingValue.value, interactionStartValue)
+    emit('commit', workingValue.value, interactionStartValue, unit)
   }
   binding?.actions.commitMutation()
 }
@@ -162,10 +163,20 @@ function onInput(event: Event) {
   setDraft(inputValue(event))
 }
 
+/** The typed expression without a unit from `units` it ends with, and that unit. */
+function splitUnit(expression: string): { value: string; unit?: string } {
+  const source = expression.trim()
+  const unit = [...units]
+    .sort((a, b) => b.length - a.length)
+    .find((candidate) => source.toLowerCase().endsWith(candidate.toLowerCase()))
+  return unit ? { value: source.slice(0, -unit.length), unit } : { value: source }
+}
+
 function commitEdit() {
   if (!editing.value) return
   const expression = draftValue.value
-  const result = evaluateNumberExpression(expression, {
+  const { value, unit } = splitUnit(expression)
+  const result = evaluateNumberExpression(value, {
     current: interactionStartValue,
     max,
     mixed: interactionStartedMixed
@@ -179,7 +190,7 @@ function commitEdit() {
     emit('invalid', expression, result.error)
     return
   }
-  finishCommit(result.value)
+  finishCommit(result.value, unit)
 }
 
 function cancelEdit() {

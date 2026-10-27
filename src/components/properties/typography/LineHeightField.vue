@@ -12,7 +12,7 @@ import VariableNumberField from '@/components/properties/VariableNumberField.vue
 import AppSelectContent from '@/components/ui/select/AppSelectContent.vue'
 import AppSelectItem from '@/components/ui/select/AppSelectItem.vue'
 
-import { useTextLength } from './useTextLength'
+import { TEXT_LENGTH_UNITS, useTextLength } from './useTextLength'
 
 /** Every selected text layer; the field reads Mixed when their line heights differ. */
 const { nodes } = defineProps<{ nodes: readonly SceneNode[] }>()
@@ -28,6 +28,11 @@ const isAutomatic = (node: SceneNode) => node.lineHeight == null && !node.boundV
 const automaticPixels = (node: SceneNode) => Math.round((node.fontSize || 14) * 1.2)
 const automatic = computed(() => nodes.length > 0 && nodes.every(isAutomatic))
 const { value, suffix, length } = useTextLength(() => nodes, 'lineHeight', automaticPixels)
+/** The panel commits what it previewed, so a typed unit is previewed first. */
+function commit(current: number, previous: number, unit?: string) {
+  if (unit) emit('update', length(current, unit))
+  emit('commit', length(current, unit), length(previous))
+}
 const nodeId = computed(() => nodes.at(0)?.id ?? '')
 const nodeIds = computed(() => nodes.map((node) => node.id))
 function setMode(mode: string) {
@@ -59,9 +64,10 @@ function setMode(mode: string) {
     :min="0"
     :node-id="nodeId"
     :node-ids="nodeIds"
+    :units="TEXT_LENGTH_UNITS"
     binding-path="lineHeight"
     @update:model-value="emit('update', length($event))"
-    @commit="(current, previous) => emit('commit', length(current), length(previous))"
+    @commit="commit"
   >
     <template #icon><icon-lucide-baseline class="size-3" /></template>
     <template v-if="automatic" #display

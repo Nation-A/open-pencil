@@ -26,6 +26,8 @@ export interface NumberFieldProps {
   inheritBinding?: boolean
   bound?: boolean
   editPolicy?: NumberFieldEditPolicy
+  /** Units a typed value may end with; the commit reports the one typed. */
+  units?: readonly string[]
   ui?: NumberFieldUI
 }
 
@@ -70,6 +72,7 @@ const {
   inheritBinding = true,
   bound,
   editPolicy,
+  units,
   ui
 } = defineProps<NumberFieldProps>()
 const accessibleLabel = computed(() => {
@@ -81,7 +84,7 @@ const styles = computed(() => tv(theme)({ suffix: Boolean(slots.suffix) }))
 const emit = defineEmits<{
   'update:modelValue': [value: number]
   'editing-change': [editing: boolean]
-  commit: [value: number, previous: number]
+  commit: [value: number, previous: number, unit?: string]
   cancel: []
   invalid: [expression: string, reason: NumberExpressionError]
   'detach-request': [source: 'edit' | 'scrub' | 'step']
@@ -104,8 +107,9 @@ defineOptions({ inheritAttrs: false })
     :inherit-binding="inheritBinding"
     :bound="bound"
     :edit-policy="editPolicy"
+    :units="units"
     @update:model-value="emit('update:modelValue', $event)"
-    @commit="(val: number, prev: number) => emit('commit', val, prev)"
+    @commit="(val: number, prev: number, unit?: string) => emit('commit', val, prev, unit)"
     @cancel="emit('cancel')"
     @invalid="
       (expression: string, reason: NumberExpressionError) => emit('invalid', expression, reason)

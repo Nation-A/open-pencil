@@ -59,3 +59,47 @@ test('automatic line height survives focus and can be restored with undo', async
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
   await expect(field).toHaveAttribute('data-bound')
 })
+
+test('a typed % or px switches the unit of line height and letter spacing', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1200 })
+  await page.goto('/?test')
+  await new CanvasHelper(page).waitForInit()
+  const id = await page.evaluate(() => {
+    const e = window.openPencil?.getStore?.()
+    if (!e) throw new Error('No editor')
+    const id = e.createShape('TEXT', 100, 100, 240, 80)
+    e.updateNode(id, {
+      text: 'Units',
+      fontSize: 20,
+      lineHeight: { value: 24, unit: 'PIXELS' },
+      letterSpacing: { value: 0, unit: 'PIXELS' }
+    })
+    e.select([id])
+    return id
+  })
+  const read = (field: 'lineHeight' | 'letterSpacing') =>
+    page.evaluate(({ id, field }) => window.openPencil?.getStore?.().graph.getNode(id)?.[field], {
+      id,
+      field
+    })
+  const type = async (name: string, text: string) => {
+    const input = page.getByRole('spinbutton', { name, exact: true })
+    await input.focus()
+    await input.fill(text)
+    await input.press('Enter')
+  }
+
+  await type('Line height', '150%')
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 150, unit: 'PERCENT' })
+  await expect(page.locator('[data-property="lineHeight"]')).toContainText('%')
+  await type('Line height', '30px')
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 30, unit: 'PIXELS' })
+  await type('Letter spacing', '2%')
+  await expect.poll(() => read('letterSpacing')).toEqual({ value: 2, unit: 'PERCENT' })
+
+  await page.getByRole('heading', { name: 'Typography', exact: true }).click()
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+  await expect.poll(() => read('letterSpacing')).toEqual({ value: 0, unit: 'PIXELS' })
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+  await expect.poll(() => read('lineHeight')).toEqual({ value: 150, unit: 'PERCENT' })
+})

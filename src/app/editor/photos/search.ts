@@ -44,8 +44,9 @@ export function photoServiceHasKey(service: PhotoService): boolean {
 }
 
 /**
- * Searches the chosen stock photo service as the query changes, a page at a time. A newer
- * search drops the answers to older ones.
+ * Searches the chosen stock photo service as the query changes, a page at a time, and shows its
+ * own picks (Unsplash's editorial feed, Pexels' curated photos) while the query is empty. A newer
+ * request drops the answers to older ones.
  */
 export function usePhotoSearch() {
   const query = ref('')
@@ -57,32 +58,56 @@ export function usePhotoSearch() {
   const hasKey = computed(() => photoServiceHasKey(service.value))
   let page = 0
   let generation = 0
+  /**
+   * The picks last listed, kept so clearing a search shows them again without another request:
+   * a new Unsplash key has 50 requests an hour.
+   */
+  let picks: {
+    service: PhotoService
+    photos: StockPhotoResult[]
+    page: number
+    hasMore: boolean
+  } | null = null
+
+  function show(found: StockPhotoResult[], next: number, more: boolean) {
+    page = next
+    const shown = next === 1 ? [] : photos.value
+    const seen = new Set(shown.map((photo) => photo.sourceId))
+    photos.value = [...shown, ...found.filter((photo) => !seen.has(photo.sourceId))]
+    hasMore.value = more
+  }
 
   async function load(next: number) {
     const term = query.value.trim()
     const provider = getStockPhotoProvider(service.value)
     const current = ++generation
-    if (!term || !provider) {
+    if (!provider || (!term && !provider.browse)) {
       photos.value = []
       loading.value = false
       failed.value = false
       hasMore.value = false
       return
     }
+    if (!term && next === 1 && picks?.service === service.value) {
+      photos.value = picks.photos
+      page = picks.page
+      hasMore.value = picks.hasMore
+      loading.value = false
+      failed.value = false
+      return
+    }
     loading.value = true
     failed.value = false
+    const options = { perPage: PHOTOS_PER_PAGE, page: next, targetDim: PLACED_PHOTO_SIZE }
     try {
-      const found = await provider.search(term, {
-        perPage: PHOTOS_PER_PAGE,
-        page: next,
-        targetDim: PLACED_PHOTO_SIZE
-      })
+      const found = term
+        ? await provider.search(term, options)
+        : ((await provider.browse?.(options)) ?? [])
       if (current !== generation) return
-      page = next
-      const shown = next === 1 ? [] : photos.value
-      const seen = new Set(shown.map((photo) => photo.sourceId))
-      photos.value = [...shown, ...found.filter((photo) => !seen.has(photo.sourceId))]
-      hasMore.value = found.length === PHOTOS_PER_PAGE
+      show(found, next, found.length === PHOTOS_PER_PAGE)
+      if (!term) {
+        picks = { service: service.value, photos: photos.value, page, hasMore: hasMore.value }
+      }
     } catch {
       if (current !== generation) return
       failed.value = true
@@ -102,9 +127,21 @@ export function usePhotoSearch() {
   })
   // Placeholders show from the first keystroke, not only once the search goes out.
   watch([query, service], () => {
-    if (query.value.trim() && hasKey.value) loading.value = true
+    if (hasKey.value) loading.value = true
   })
   watchDebounced([query, service, hasKey], () => void load(1), { debounce: SEARCH_DEBOUNCE_MS })
+
+  /**
+   * Readies the picker as it opens: on the service last searched, or on one with a key when that
+   * one has none, showing its picks unless photos are already listed.
+   */
+  function open() {
+    if (!hasKey.value) {
+      const configured = PHOTO_SERVICES.find((item) => photoServiceHasKey(item.id))
+      if (configured) service.value = configured.id
+    }
+    if (photos.value.length === 0 && !loading.value) void load(1)
+  }
 
   function loadMore() {
     if (!loading.value && hasMore.value) void load(page + 1)
@@ -114,5 +151,5 @@ export function usePhotoSearch() {
     return photos.value.find((photo) => photo.sourceId === id)
   }
 
-  return { query, service, photos, loading, failed, hasMore, hasKey, loadMore, find }
+  return { query, service, photos, loading, failed, hasMore, hasKey, open, loadMore, find }
 }

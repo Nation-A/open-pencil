@@ -40,8 +40,10 @@ const search = usePhotoSearch()
 const { query, service, photos, loading, failed, hasMore, hasKey } = search
 
 // The keys may have changed elsewhere, such as in Settings, since the picker last opened.
-watch(open, (isOpen) => {
-  if (isOpen) void refreshMediaCredentials()
+watch(open, async (isOpen) => {
+  if (!isOpen) return
+  await refreshMediaCredentials()
+  search.open()
 })
 
 const serviceInfo = computed(() => PHOTO_SERVICES.find((item) => item.id === service.value))

@@ -12,7 +12,10 @@ const PNG = Buffer.from(
 )
 
 const ctx = useEditorSetupWithClear()
-/** The searches each service answered and the photos Unsplash was told were used. */
+/**
+ * The searches each service answered, `(picks)` for the photos it lists before a search, and the
+ * photos Unsplash was told were used.
+ */
 const requests = { unsplash: [] as string[], pexels: [] as string[], reported: [] as string[] }
 
 function unsplashPhoto(id: string) {
@@ -36,13 +39,17 @@ test.beforeAll(async () => {
     if (url.pathname === '/search/photos') {
       requests.unsplash.push(url.searchParams.get('query') ?? '')
       await route.fulfill({ json: { results: [unsplashPhoto('first'), unsplashPhoto('second')] } })
+    } else if (url.pathname === '/photos') {
+      requests.unsplash.push('(picks)')
+      await route.fulfill({ json: [unsplashPhoto('editorial')] })
     } else {
       requests.reported.push(url.pathname)
       await route.fulfill({ json: { url: 'https://images.unsplash.test/first.png' } })
     }
   })
   await ctx.page.route('https://api.pexels.com/**', async (route) => {
-    requests.pexels.push(new URL(route.request().url()).searchParams.get('query') ?? '')
+    const url = new URL(route.request().url())
+    requests.pexels.push(url.searchParams.get('query') ?? '(picks)')
     const src = 'https://images.pexels.test/one.png'
     await route.fulfill({
       json: {
@@ -112,10 +119,12 @@ test('Stock photo sends a missing key to Settings, then fills the layer with the
   const page = ctx.page
   await openPicker(page)
   const dialog = await addKeyInSettings(page, 'Unsplash', 'Access key')
+  // Before a search, Unsplash's editorial feed.
+  await expect(dialog.getByRole('option')).toHaveCount(1)
 
   await dialog.getByRole('textbox', { name: 'Search photos...' }).fill('mountains')
   await expect(dialog.getByRole('option')).toHaveCount(2)
-  expect(requests.unsplash).toEqual(['mountains'])
+  expect(requests.unsplash).toEqual(['(picks)', 'mountains'])
   await dialog.getByRole('option').first().hover()
   await expect(dialog).toContainText('Photo by Ann Lee on Unsplash')
 
@@ -132,10 +141,36 @@ test('switching to a service without a key asks for that one, and its photo fill
   await picker.getByRole('combobox', { name: 'Photo service' }).click()
   await page.getByRole('option', { name: 'Pexels' }).click()
   const dialog = await addKeyInSettings(page, 'Pexels', 'API key')
+  // Before a search, Pexels' curated photos.
+  await expect(dialog.getByRole('option')).toHaveCount(1)
 
   await dialog.getByRole('textbox', { name: 'Search photos...' }).fill('forest')
+  await expect.poll(() => requests.pexels).toEqual(['(picks)', 'forest'])
   await dialog.getByRole('option').first().click()
   await expect.poll(async () => (await imageFill(page))?.imageHash).toBeTruthy()
-  expect(requests.pexels).toEqual(['forest'])
   expect(requests.reported).toEqual([])
+})
+
+test('the picker opens on a service with a key when the last one searched has none', async () => {
+  const page = ctx.page
+  const picker = await openPicker(page)
+  await expect(picker.getByRole('combobox', { name: 'Photo service' })).toHaveText('Pexels')
+  await page.keyboard.press('Escape')
+  await expect(picker).toBeHidden()
+
+  // Pexels was searched last; its key goes, Unsplash's stays.
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,')
+  await page.getByTestId('settings-section-media').click()
+  await page
+    .getByTestId('settings-media-panel')
+    .getByRole('button', { name: /Pexels/ })
+    .click()
+  await page.getByTestId('provider-settings-clear-key').click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByTestId('app-settings-done').click()
+
+  await page.getByTestId('fill-picker-swatch').first().click()
+  await page.getByTestId('fill-picker-stock-photo').click()
+  await expect(picker.getByRole('combobox', { name: 'Photo service' })).toHaveText('Unsplash')
+  await expect(picker.getByRole('option')).toHaveCount(1)
 })

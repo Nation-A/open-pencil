@@ -1,1 +1,1 @@
-- An image fill's **Stock photo** searches Unsplash or Pexels and fills the layer with the photo picked, crediting its photographer; a service without a key leads to its free key in Settings.
+- An image fill's **Stock photo** searches Unsplash or Pexels and fills the layer with the photo picked, crediting its photographer and showing the service's own picks before a search; a service without a key leads to its free key in Settings, where **Test connection** checks it.

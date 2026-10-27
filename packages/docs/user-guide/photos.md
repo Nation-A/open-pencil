@@ -15,10 +15,12 @@ Draw the frame or shape the photo should fill, then:
 
 1. Open its fill and switch it to **Image**.
 2. Choose **Stock photo** in the preview.
-3. Type what you're looking for, such as `mountains` or `coffee`; more results load as you scroll. Hover over a photo, or move to it with the arrow keys, to see who took it.
+3. Before you type, the picker shows the service's own picks: Unsplash's editorial feed or Pexels' curated photos. Type what you're looking for, such as `mountains` or `coffee`; more results load as you scroll. Hover over a photo, or move to it with the arrow keys, to see who took it.
 4. Pick one. It becomes the layer's image fill and keeps the fill's scale mode, so **Fill**, **Fit**, **Crop**, and **Tile** work on it as on any image.
 
-The service button in the picker's header switches between Unsplash and Pexels, and the picker remembers the one you used last. Until a service has a key, the picker says so: choose **Open Settings**, open the service in **Settings → Media**, follow **Get API key** to create one, paste it, and choose **Save**.
+The service button in the picker's header switches between Unsplash and Pexels. The picker opens on the one you used last, or on one with a key when that one has none. Until a service has a key, the picker says so: choose **Open Settings**, open the service in **Settings → Media**, follow **Get API key** to create one, paste it, and choose **Save**. **Test connection** tries the key you typed, or the saved one, with one request to the service.
+
+An Unsplash app has two keys: paste its **Access Key**, not its Secret key. A new Unsplash app allows 50 requests an hour until Unsplash approves it for production; each search, each page of results, and each test counts.
 
 Pexels has paused issuing new API keys. If you already have a Pexels key, it still works; otherwise use Unsplash.
 

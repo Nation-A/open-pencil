@@ -38,7 +38,7 @@ describe('parseSVGPath', () => {
   })
 
   test('keeps the point a subpath ended on when other segments use it', () => {
-    const network = parseSVGPath('M0 0L5 5L0.0001 0L5 5L0.0001 0Z')
+    const network = parseSVGPath('M0 0L5 5L0.0000001 0L5 5L0.0000001 0Z')
 
     expect(network.vertices).toHaveLength(3)
     expect(network.segments.map(({ start, end }) => [start, end])).toEqual([
@@ -46,6 +46,17 @@ describe('parseSVGPath', () => {
       [1, 2],
       [2, 1],
       [1, 0]
+    ])
+  })
+
+  test('closes a tiny shape with a segment of its own rather than merging its points', () => {
+    const network = parseSVGPath('M0 0L0.0005 0L0 0.0005Z')
+
+    expect(network.vertices).toHaveLength(3)
+    expect(network.segments.map(({ start, end }) => [start, end])).toEqual([
+      [0, 1],
+      [1, 2],
+      [2, 0]
     ])
   })
 })

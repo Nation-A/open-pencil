@@ -9,6 +9,9 @@ interface SubPath {
 }
 
 export type VectorPathWindingRule = WindingRule | 'NONE'
+
+/** How far apart an end and its subpath's start can be from rounding alone. */
+const CLOSING_ROUNDING = 1e-6
 export type SVGPathParseResult = { ok: true; network: VectorNetwork } | { ok: false; error: string }
 
 interface ParseOptions {
@@ -196,11 +199,13 @@ function parsePath(
     } else if (cmd === 'Z' || cmd === 'z') {
       if (currentSubPath) {
         const startVert = vertices[currentSubPath.startVertexIndex]
-        if (Math.abs(cx - startVert.x) > 0.001 || Math.abs(cy - startVert.y) > 0.001) {
-          addLine(cx, cy, startVert.x, startVert.y)
-        } else {
-          closeOnStart(currentSubPath)
-        }
+        // Only rounding, such as an arc turned into curves leaves, merges an end into the start;
+        // a point the path drew, however close, keeps its own closing segment.
+        const rounding =
+          Math.abs(cx - startVert.x) <= CLOSING_ROUNDING &&
+          Math.abs(cy - startVert.y) <= CLOSING_ROUNDING
+        if (rounding) closeOnStart(currentSubPath)
+        else addLine(cx, cy, startVert.x, startVert.y)
         currentSubPath.closed = true
         cx = startVert.x
         cy = startVert.y

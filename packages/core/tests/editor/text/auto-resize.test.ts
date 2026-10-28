@@ -165,4 +165,24 @@ describe('fixed-size text', () => {
 
     expect(getNodeOrThrow(editor.graph, text.id).derivedTextHeight).toBeNull()
   })
+
+  test('measures its lines again when their case changes', () => {
+    // Upper case takes more room here, so the same text wraps onto more lines.
+    setTextMeasurer((node, maxWidth) => {
+      const width = (node.text?.length ?? 0) * (node.textCase === 'UPPER' ? 20 : 10)
+      const lines = maxWidth ? Math.ceil(width / maxWidth) : 1
+      return { width: Math.min(width, maxWidth ?? width), height: lines * 20 }
+    })
+    const editor = createEditor()
+    const text = editor.graph.createNode('TEXT', editor.state.currentPageId, {
+      text: 'ten chars!',
+      textAutoResize: 'NONE',
+      width: 100,
+      height: 20
+    })
+
+    editor.updateNode(text.id, { textCase: 'UPPER' })
+
+    expect(getNodeOrThrow(editor.graph, text.id).derivedTextHeight).toBe(40)
+  })
 })

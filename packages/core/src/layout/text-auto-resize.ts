@@ -5,6 +5,9 @@ import { measureTextForLayout } from './text-measurement'
 
 export const TEXT_AUTO_RESIZE_KEYS = new Set<keyof SceneNode>([
   ...TEXT_METRIC_FIELDS,
+  // Case and direction change what the lines hold, so where they break.
+  'textCase',
+  'textDirection',
   'lineHeight',
   'textAutoResize',
   'width',

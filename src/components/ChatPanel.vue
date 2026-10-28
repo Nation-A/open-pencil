@@ -121,6 +121,9 @@ async function historyAction(action: () => Promise<unknown>) {
     toast.error(ai.value.chatHistoryFailed)
   } finally {
     queueHeld = false
+    // The stopped reply may have ended while the switch held the queue, which then waits for
+    // no reply to end.
+    if (status.value === 'ready') sendNextQueued()
   }
 }
 
@@ -198,10 +201,13 @@ function sendOrQueue(message: ChatSubmission, afterWork: boolean) {
   void submitMessage(message)
 }
 // Once a reply ends, what waited goes next, one message per reply; a failed reply keeps them.
-watch(status, (now, before) => {
-  if (now !== 'ready' || before === 'ready' || queueHeld) return
+function sendNextQueued() {
   const next = takeNextMessage()
   if (next) void submitMessage(next)
+}
+watch(status, (now, before) => {
+  if (now !== 'ready' || before === 'ready' || queueHeld) return
+  sendNextQueued()
 })
 const showContinue = computed(() => {
   if (history.readOnly.value || agentHistoryReadOnly.value) return false

@@ -378,9 +378,10 @@ function resizeNode(
     const changes = computeConstrainedResizeChanges(scene, node.id, size, { width, height }, placed)
     for (const [id, change] of changes) scene.updateNode(id, change)
   }
+  // A size the layer already has records nothing, as in Figma; a new one records both sides.
+  const resized = width !== size.width || height !== size.height
   recordInstanceOverride(scene, node.id, [
-    'width',
-    'height',
+    ...(resized ? ['width', 'height'] : []),
     ...Object.keys(geometry),
     ...Object.keys(recaptured),
     ...Object.keys(sizing),

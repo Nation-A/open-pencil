@@ -98,3 +98,21 @@ describe('resize inside an instance', () => {
     )
   })
 })
+
+describe('resize to the size a layer has', () => {
+  test('records no size override on an instance, and a new size records both sides', () => {
+    const graph = new SceneGraph()
+    const figma = new FigmaAPI(graph)
+    const component = figma.createComponent()
+    component.resize(40, 30)
+    const instance = component.createInstance()
+
+    instance.resize(40, 30)
+    expect(hasInstanceOverride(graph, instance.id, 'width')).toBe(false)
+    expect(hasInstanceOverride(graph, instance.id, 'height')).toBe(false)
+
+    instance.resize(60, 30)
+    expect(hasInstanceOverride(graph, instance.id, 'width')).toBe(true)
+    expect(hasInstanceOverride(graph, instance.id, 'height')).toBe(true)
+  })
+})

@@ -4,11 +4,12 @@ import {
   effectOverflow,
   geometryBlobBounds,
   strokeOverflow,
+  textDecorationOverflow,
   unionVisualBounds,
   type VisualBounds
 } from '@open-pencil/scene-graph/geometry'
 import Matrix, { type Mat3 } from '@open-pencil/scene-graph/matrix'
-import { textDecorationOverflow, textLinesOverflow } from '@open-pencil/scene-graph/text'
+import { textLinesOverflow } from '@open-pencil/scene-graph/text'
 
 import { projectedNode, type RotationPreview } from '#core/geometry'
 

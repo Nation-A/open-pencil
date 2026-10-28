@@ -1,6 +1,6 @@
 import { arrowCapOverflow } from './arrow-caps'
 import type { Rect, Vector } from './primitives'
-import { textDecorationOverflow, textLinesOverflow } from './text/overflow'
+import { textLinesOverflow } from './text/overflow'
 import type { Effect, Stroke, StrokeCap, StrokeJoin, VectorNetwork } from './types'
 
 export function degToRad(degrees: number): number {
@@ -420,6 +420,15 @@ export function nodeVisualBounds(
   bounds.maxY += textDecorationOverflow(node)
 
   return bounds
+}
+
+/** How far a text node's underline or strikethrough reaches below its box. */
+export function textDecorationOverflow(node: VisualBoundsNode): number {
+  if (node.type !== 'TEXT' || !node.textDecoration || node.textDecoration === 'NONE') return 0
+  const fontSize = node.fontSize ?? 14
+  const underlineOffset = node.textUnderlineOffset ?? fontSize * 0.18
+  const thickness = node.textDecorationThickness ?? Math.max(1, fontSize / 16)
+  return underlineOffset + thickness + fontSize * 0.35
 }
 
 function collectDescendantVisualBounds(

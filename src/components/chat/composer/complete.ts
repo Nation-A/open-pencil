@@ -1,5 +1,4 @@
 import type { Completion, CompletionContext, CompletionSource } from '@codemirror/autocomplete'
-import type { EditorView } from '@codemirror/view'
 import type { Component } from 'vue'
 import IconBookOpen from '~icons/lucide/book-open'
 import IconFile from '~icons/lucide/file'
@@ -14,8 +13,8 @@ export interface ComposerCompletion extends Completion {
   icon: Component
 }
 
-export function completionIcon(completion: Completion): Component | null {
-  return 'icon' in completion ? (completion as ComposerCompletion).icon : null
+export function isComposerCompletion(completion: Completion): completion is ComposerCompletion {
+  return 'icon' in completion
 }
 
 export interface ComposerSections {
@@ -34,40 +33,32 @@ const KIND_ICONS: Record<ChatReferenceKind, Component> = {
 
 const SECTION_RANK: Record<ChatReferenceKind, number> = { node: 0, page: 1, skill: 2 }
 
-/** Replaces the typed `@query`, its `@` included, with the reference and a space after it. */
-function insertReference(link: string) {
-  return (view: EditorView, _completion: Completion, from: number, to: number) => {
-    const insert = `${link} `
-    view.dispatch({
-      changes: { from: from - 1, to, insert },
-      selection: { anchor: from - 1 + insert.length },
-      userEvent: 'input.complete'
-    })
-  }
-}
+/** What may stand before an `@` that starts a reference: nothing, a space, or an opening bracket. */
+const REFERENCE_START = /^[\s([]?$/
 
-/** `@` anywhere offers layers, pages, and skills, inserted as reference links. */
+/** `@` anywhere offers layers, pages, and skills, replacing `@query` with a reference link. */
 export function referenceCompletion(
   candidates: (query: string) => readonly ReferenceCandidate[],
   sections: () => ComposerSections
 ): CompletionSource {
   return (context: CompletionContext) => {
-    const typed = context.matchBefore(/(?:^|[\s([])@[^\s@]*$/)
+    const typed = context.matchBefore(/@[^\s@]*$/)
     if (!typed) return null
-    const at = typed.text.lastIndexOf('@')
+    if (!REFERENCE_START.test(context.state.sliceDoc(typed.from - 1, typed.from))) return null
     const names = sections()
-    // No `validFor`: the source runs again as the query grows, since it caps how many it lists.
+    const query = typed.text.slice(1)
+    // The candidates are matched and capped by the query already, so the list is shown as given
+    // and asked for again as the query grows.
     return {
-      from: typed.from + at + 1,
-      options: candidates(typed.text.slice(at + 1)).map(
-        ({ reference, detail, node }): ComposerCompletion => ({
-          icon: node ? sceneNodeIcon(node) : KIND_ICONS[reference.kind],
-          label: reference.label || reference.id,
-          detail: detail ?? undefined,
-          section: { name: names[reference.kind], rank: SECTION_RANK[reference.kind] },
-          apply: insertReference(referenceLink(reference))
-        })
-      )
+      from: typed.from,
+      filter: false,
+      options: candidates(query).map(({ reference, detail, node }): ComposerCompletion => ({
+        icon: node ? sceneNodeIcon(node) : KIND_ICONS[reference.kind],
+        label: reference.label || reference.id,
+        detail: detail ?? undefined,
+        section: { name: names[reference.kind], rank: SECTION_RANK[reference.kind] },
+        apply: `${referenceLink(reference)} `
+      }))
     }
   }
 }

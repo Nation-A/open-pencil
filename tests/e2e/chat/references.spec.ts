@@ -22,6 +22,11 @@ test('@ inserts a layer as a chip that the reply shows and that selects the laye
   })
 
   await chat.input.click()
+  // An `@` inside a word, as in an address, is not a reference.
+  await page.keyboard.type('ann@Her')
+  await expect(page.getByRole('option', { name: /Hero/ })).toHaveCount(0)
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press('Backspace')
   await page.keyboard.type('Tighten @Her')
   await page.getByRole('option', { name: /Hero/ }).click()
   const draftChip = chat.input.locator('[data-slot="chat-reference"]')

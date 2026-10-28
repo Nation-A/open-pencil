@@ -9,22 +9,30 @@ import {
 import { defaultKeymap, history, historyKeymap, insertNewline } from '@codemirror/commands'
 import { EditorSelection, EditorState, Prec } from '@codemirror/state'
 import { drawSelection, EditorView, keymap, placeholder, tooltips } from '@codemirror/view'
-import { getCurrentInstance, h, render, shallowRef, type ShallowRef } from 'vue'
+import { getCurrentInstance, h, render, shallowRef, type Component, type ShallowRef } from 'vue'
 
 import { useCodeMirror } from '@/components/code-editor/useCodeMirror'
 import { chatComposerTheme } from '@/theme/chat/composer'
 
-import { completionIcon } from './complete'
+import { isComposerCompletion } from './complete'
 import { composerAppContext, referenceChips } from './references'
 
-/** Each row's glyph, as the layers panel draws it. */
+/**
+ * Each row's glyph, as the layers panel draws it. The icons are static SVG, so each is rendered
+ * once and copied into rows: a row has no teardown to unmount a component from.
+ */
+const renderedIcons = new WeakMap<Component, Element>()
 function renderCompletionIcon(completion: Completion): Node | null {
-  const icon = completionIcon(completion)
-  if (!icon) return null
-  const host = document.createElement('span')
-  host.className = 'cm-composer-icon'
-  render(h(icon, { 'aria-hidden': 'true' }), host)
-  return host
+  if (!isComposerCompletion(completion)) return null
+  let icon = renderedIcons.get(completion.icon)
+  if (!icon) {
+    const host = document.createElement('span')
+    host.className = 'cm-composer-icon'
+    render(h(completion.icon, { 'aria-hidden': 'true' }), host)
+    icon = host
+    renderedIcons.set(completion.icon, icon)
+  }
+  return icon.cloneNode(true)
 }
 
 interface ChatEditorOptions {

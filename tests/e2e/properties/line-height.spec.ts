@@ -111,4 +111,15 @@ test('a typed % or px switches the unit of line height and letter spacing', asyn
   await expect.poll(() => read('letterSpacing')).toEqual({ value: 0, unit: 'PIXELS' })
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
   await expect.poll(() => read('lineHeight')).toEqual({ value: 151, unit: 'PERCENT' })
+
+  // A value stepped below zero stays that value, not an expression subtracting from the start.
+  await type('Letter spacing', '2px')
+  await expect.poll(() => read('letterSpacing')).toEqual({ value: 2, unit: 'PIXELS' })
+  const letterSpacing = page.getByRole('spinbutton', { name: 'Letter spacing', exact: true })
+  await letterSpacing.focus()
+  await letterSpacing.fill('0px')
+  await letterSpacing.press('ArrowDown')
+  await letterSpacing.press('ArrowDown')
+  await letterSpacing.press('Enter')
+  await expect.poll(() => read('letterSpacing')).toEqual({ value: -2, unit: 'PIXELS' })
 })

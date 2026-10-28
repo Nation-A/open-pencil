@@ -81,6 +81,8 @@ const ariaLabelValue = computed(() => ariaLabel)
 let interactionStartValue = 0
 let interactionStartedMixed = false
 let mutationRequested = false
+/** The draft the arrow keys last wrote, whose value is already absolute: `-1` is not "minus 1". */
+let steppedDraft: string | null = null
 let stopMove: (() => void) | undefined
 let stopUp: (() => void) | undefined
 let stopCancel: (() => void) | undefined
@@ -108,6 +110,7 @@ function beginInteraction() {
   interactionStartedMixed = isMixed.value
   workingValue.value = numericValue.value
   mutationRequested = false
+  steppedDraft = null
   invalidReason.value = null
 }
 
@@ -176,6 +179,10 @@ function commitEdit() {
   if (!editing.value) return
   const expression = draftValue.value
   const { value, unit } = splitUnit(expression)
+  if (expression === steppedDraft) {
+    finishCommit(workingValue.value, unit)
+    return
+  }
   const result = evaluateNumberExpression(value, {
     current: interactionStartValue,
     max,
@@ -283,13 +290,14 @@ function stepValueFromKeyboard(event: KeyboardEvent) {
 
   // A unit typed after the value stays on it, for the commit to report.
   const draft = editing.value ? splitUnit(draftValue.value) : undefined
-  const draftResult = draft
-    ? evaluateNumberExpression(draft.value, {
-        current: interactionStartValue,
-        max,
-        mixed: interactionStartedMixed
-      })
-    : undefined
+  const draftResult =
+    draft && draftValue.value !== steppedDraft
+      ? evaluateNumberExpression(draft.value, {
+          current: interactionStartValue,
+          max,
+          mixed: interactionStartedMixed
+        })
+      : undefined
   const base = draftResult?.ok ? draftResult.value : workingValue.value
   const next = stepNumberValue(
     base,
@@ -301,6 +309,7 @@ function stepValueFromKeyboard(event: KeyboardEvent) {
   )
   updateValue(next)
   draftValue.value = `${next}${draft?.unit ?? ''}`
+  steppedDraft = draftValue.value
 
   if (!editing.value) {
     emit('commit', next, interactionStartValue)

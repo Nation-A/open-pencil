@@ -256,7 +256,7 @@ function scaleDerivedGlyphs(
 }
 
 function hasPath(orig: Pick<ResizeSnapshot, 'vectorNetwork'>): boolean {
-  return (orig.vectorNetwork?.vertices.length ?? 0) > 0
+  return (orig.vectorNetwork?.segments.length ?? 0) > 0
 }
 
 function scaleStrokes(strokes: Stroke[], sx: number, sy: number): Stroke[] {

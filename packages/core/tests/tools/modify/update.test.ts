@@ -38,4 +38,15 @@ describe('update_node', () => {
     })
     expect([stack.layoutSizingHorizontal, stack.layoutSizingVertical]).toEqual(['FIXED', 'FIXED'])
   })
+
+  test('reports a text that stops sizing itself at the size it had', async () => {
+    const figma = new FigmaAPI(new SceneGraph())
+    const text = figma.createText()
+    text.characters = 'Label'
+
+    const result = await updateNode.execute(figma, { id: text.id, width: text.width })
+
+    expect(result).toEqual({ id: text.id, updated: ['textAutoResize'] })
+    expect(text.textAutoResize).toBe('NONE')
+  })
 })

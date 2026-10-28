@@ -6,26 +6,27 @@ import { assertNodeEditable } from '#core/editor/capabilities'
 import type { FigmaNodeProxy } from '#core/figma-api'
 import { toolNumber, nodeIdInputSchema, defineTool, nodeNotFound } from '#core/tools/schema'
 
-/** The size of a layer and how auto layout sizes it, which a resize may change. */
+/** The size of a layer and how auto layout or its text sizes it, which a resize may change. */
 function sizing(node: FigmaNodeProxy) {
   return {
     width: node.width,
     height: node.height,
     layoutSizingHorizontal: node.layoutSizingHorizontal,
-    layoutSizingVertical: node.layoutSizingVertical
+    layoutSizingVertical: node.layoutSizingVertical,
+    textAutoResize: node.textAutoResize
   }
 }
 
 /**
  * Resizes a layer and names what the resize changed: a layer inside an instance keeps its size,
- * as in Figma, and an auto layout frame given its own size still stops hugging.
+ * as in Figma, while an auto layout frame or a text given its own size stops sizing itself.
  */
 function resized(node: FigmaNodeProxy, width = node.width, height = node.height): string[] {
   const before = sizing(node)
   node.resize(width, height)
   const after = sizing(node)
   const changed = after.width !== before.width || after.height !== before.height ? ['size'] : []
-  for (const key of ['layoutSizingHorizontal', 'layoutSizingVertical'] as const)
+  for (const key of ['layoutSizingHorizontal', 'layoutSizingVertical', 'textAutoResize'] as const)
     if (after[key] !== before[key]) changed.push(key)
   return changed
 }

@@ -3,18 +3,23 @@ import { TEXT_METRIC_FIELDS } from '@open-pencil/scene-graph/fields'
 
 import { measureTextForLayout } from './text-measurement'
 
+/** Case and direction change what the lines hold, so how wide they are and where they break. */
+const TEXT_CONTENT_FIELDS = ['textCase', 'textDirection'] as const
+
 export const TEXT_AUTO_RESIZE_KEYS = new Set<keyof SceneNode>([
   ...TEXT_METRIC_FIELDS,
-  // Case and direction change what the lines hold, so where they break.
-  'textCase',
-  'textDirection',
+  ...TEXT_CONTENT_FIELDS,
   'lineHeight',
   'textAutoResize',
   'width',
   'maxLines'
 ])
 
-const TEXT_AUTO_WIDTH_KEYS = new Set<keyof SceneNode>([...TEXT_METRIC_FIELDS, 'textAutoResize'])
+const TEXT_AUTO_WIDTH_KEYS = new Set<keyof SceneNode>([
+  ...TEXT_METRIC_FIELDS,
+  ...TEXT_CONTENT_FIELDS,
+  'textAutoResize'
+])
 
 export function hasTextAutoResizeChange(changes: Partial<SceneNode>): boolean {
   return Object.keys(changes).some((key) => TEXT_AUTO_RESIZE_KEYS.has(key as keyof SceneNode))

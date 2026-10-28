@@ -123,6 +123,24 @@ describe('editor text auto-resize updates', () => {
     expect(getNodeOrThrow(editor.graph, text.id).width).toBe(64)
     expect(getNodeOrThrow(editor.graph, text.id).height).toBe(32)
   })
+
+  test('auto-width text takes the width its case gives it', () => {
+    setTextMeasurer((node) => ({
+      width: (node.text?.length ?? 0) * (node.textCase === 'UPPER' ? 20 : 10),
+      height: 20
+    }))
+    const editor = createEditor()
+    const text = editor.graph.createNode('TEXT', editor.state.currentPageId, {
+      text: 'ten chars!',
+      textAutoResize: 'WIDTH_AND_HEIGHT',
+      width: 100,
+      height: 20
+    })
+
+    editor.updateNode(text.id, { textCase: 'UPPER' })
+
+    expect(getNodeOrThrow(editor.graph, text.id).width).toBe(200)
+  })
 })
 
 // Figma 126 draws a fixed-size text's lines past its box, so they are measured even though the

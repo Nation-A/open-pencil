@@ -1,22 +1,40 @@
 import { uniqBy } from 'es-toolkit'
 
-import { parseFontStyle } from '@open-pencil/scene-graph/font-style'
+import { parseFontStyle, standardStyleName } from '@open-pencil/scene-graph/font-style'
 
-/** One face a font family has: a weight, upright or italic. */
-export interface FamilyFace {
+/** A weight, upright or italic. */
+export interface FaceWeight {
   weight: number
   italic: boolean
 }
 
-/** The faces named by a family's style names, such as "Bold Italic" or "SemiBold". */
+/** One face a font family has: a weight, upright or italic, and the name its font gives it. */
+export interface FamilyFace extends FaceWeight {
+  style: string
+}
+
+/**
+ * The faces named by a family's style names, such as "Bold Italic" or "Semi Bold", each keeping
+ * its name. Of two names for one weight and slant, the first listed is the face's.
+ */
 export function facesFromStyles(styles: readonly string[]): FamilyFace[] {
   return uniqBy(
-    styles.map((style) => parseFontStyle(style)),
+    styles.map((style) => ({ ...parseFontStyle(style), style })),
     (face) => `${face.weight}${face.italic ? 'i' : ''}`
   )
 }
 
-export function hasFamilyFace(faces: readonly FamilyFace[], weight: number, italic: boolean) {
+/** A face named as Google Fonts names it, for a source that gives weights but no names. */
+export function standardFace(weight: number, italic: boolean): FamilyFace {
+  return { weight, italic, style: standardStyleName(weight, italic) }
+}
+
+/** The faces style keys stand for, named as Google Fonts names them. */
+export function standardFaces(styles: readonly string[]): FamilyFace[] {
+  return facesFromStyles(styles).map((face) => standardFace(face.weight, face.italic))
+}
+
+export function hasFamilyFace(faces: readonly FaceWeight[], weight: number, italic: boolean) {
   return faces.some((face) => face.weight === weight && face.italic === italic)
 }
 

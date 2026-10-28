@@ -55,7 +55,7 @@ import type { FigmaTransform } from './types'
 
 const MIXED = Symbol('mixed')
 
-export { weightToStyleName, type FigmaFont, type FigmaFontName } from './fonts'
+export type { FigmaFont, FigmaFontName } from './fonts'
 
 export const INTERNAL_ID = Symbol('id')
 export const INTERNAL_GRAPH = Symbol('graph')

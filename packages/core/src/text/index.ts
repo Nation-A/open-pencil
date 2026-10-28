@@ -13,6 +13,7 @@ export * from './web-fonts'
 export * from './path'
 export * from './prepare'
 export * from './font/faces'
+export * from './font/names'
 export { fontFaceFromFigmaFontName, fontFaceRenderFamily, type FontFaceRef } from './face'
 export {
   probeGlyphOutlineCommands,

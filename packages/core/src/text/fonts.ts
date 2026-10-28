@@ -6,7 +6,12 @@ import type { FontVariation, SceneGraph } from '@open-pencil/scene-graph'
 
 import { DEFAULT_FONT_FAMILY, IS_BROWSER } from '#core/constants'
 import { fontFaceRenderFamily } from '#core/text/face'
-import { facesFromStyles, hasFamilyFace, type FamilyFace } from '#core/text/font/faces'
+import {
+  facesFromStyles,
+  hasFamilyFace,
+  standardFaces,
+  type FamilyFace
+} from '#core/text/font/faces'
 import { chooseLocalFontMatch } from '#core/text/font/style'
 import {
   fontAxes,
@@ -285,17 +290,18 @@ export class FontManager {
   }
 
   private async loadFamilyFaces(family: string): Promise<FamilyFace[] | null> {
-    const installed =
-      this.hostStyles.get(family) ??
-      this.localFonts?.filter((font) => font.family === family).map((font) => font.style) ??
-      []
-    if (installed.length > 0) return facesFromStyles(installed)
+    // The desktop host lists weights by generated names, so its faces take the standard names.
+    const host = this.hostStyles.get(family)
+    if (host && host.length > 0) return standardFaces(host)
+    const local = this.localFonts?.filter((font) => font.family === family) ?? []
+    if (local.length > 0) return facesFromStyles(local.map((font) => font.style))
     const web = await this.webFonts.familyFaces(family)
     if (web.length > 0) return web
+    // The bundled fonts name their faces as Google Fonts does; their keys are style keys.
     const bundled = Object.keys(BUNDLED_FONTS)
       .filter((key) => key.startsWith(`${family}|`))
       .map((key) => key.slice(family.length + 1))
-    return bundled.length > 0 ? facesFromStyles(bundled) : null
+    return bundled.length > 0 ? standardFaces(bundled) : null
   }
 
   private forgetFamilyFaces(): void {

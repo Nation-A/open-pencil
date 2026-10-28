@@ -6,7 +6,7 @@ import { parseFontStyle, weightToStyle } from '@open-pencil/scene-graph/font-sty
 import { ResourceCache } from '#core/cache/resource'
 import { DEFAULT_FONT_FAMILY } from '#core/constants'
 import { EMOJI_METRICS_FAMILY } from '#core/text/emoji'
-import type { FamilyFace } from '#core/text/font/faces'
+import type { FaceWeight } from '#core/text/font/faces'
 import type { FontAxis } from '#core/text/font/variation'
 import { fontManager, fontWeightMatchOrder } from '#core/text/fonts'
 
@@ -65,7 +65,7 @@ export function drawnFontAxes(font: DrawnFontAxes): DrawnFontAxis[] | null {
  * nearest loaded weight in the same slant, then the other, as font matching picks it; `null`
  * when the family has none loaded.
  */
-export function loadedFace(family: string, weight: number, italic: boolean): FamilyFace | null {
+export function loadedFace(family: string, weight: number, italic: boolean): FaceWeight | null {
   for (const slant of [italic, !italic]) {
     for (const candidate of fontWeightMatchOrder(weight)) {
       if (fontManager.isStyleLoaded(family, weightToStyle(candidate, slant)))

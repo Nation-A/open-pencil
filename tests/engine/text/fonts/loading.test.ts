@@ -11,10 +11,10 @@ import {
   isVariableFont,
   FontManager
 } from '@open-pencil/core/text'
-import { weightToFigmaStyle } from '@open-pencil/fig/node-change'
 import { SceneGraph } from '@open-pencil/scene-graph'
 import {
   normalizeFontFamily,
+  standardStyleName,
   styleToVariant,
   styleToWeight,
   weightToStyle
@@ -73,15 +73,13 @@ describe('weightToStyle', () => {
   })
 })
 
-describe('weightToFigmaStyle', () => {
-  test('preserves Figma weight name spacing', () => {
-    expect(weightToFigmaStyle(200)).toBe('Extra Light')
-    expect(weightToFigmaStyle(600)).toBe('Semi Bold')
-    expect(weightToFigmaStyle(800)).toBe('Extra Bold')
-  })
-
-  test('appends Italic suffix', () => {
-    expect(weightToFigmaStyle(600, true)).toBe('Semi Bold Italic')
+describe('standardStyleName', () => {
+  test('names faces as Google Fonts does, and the regular italic "Italic"', () => {
+    expect(standardStyleName(200)).toBe('ExtraLight')
+    expect(standardStyleName(600)).toBe('SemiBold')
+    expect(standardStyleName(600, true)).toBe('SemiBold Italic')
+    expect(standardStyleName(400, true)).toBe('Italic')
+    expect(standardStyleName(450)).toBe('Medium')
   })
 })
 

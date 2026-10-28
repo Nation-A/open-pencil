@@ -1,6 +1,7 @@
 import type { DerivedTextGlyph, SceneNode } from '@open-pencil/scene-graph'
 
 import type { ShapedText } from '../derived-text/build'
+import { standardFaceNamer, type FaceStyleNamer } from '../font/style'
 import type { OutlineCommand } from '../path/commands'
 
 /**
@@ -27,9 +28,12 @@ export interface FigNodeChangeExportRuntime {
   shapeText(node: SceneNode): ShapedText | null
   /** The node's underlines and strikethroughs over these glyphs, as Figma saves them. */
   textDecorations(node: SceneNode, glyphs: readonly PlacedTextGlyph[]): TextDecorationRecord[]
+  /** The name a family's font gives its face at a weight and slant, which Figma finds it by. */
+  fontStyleName: FaceStyleNamer
 }
 
 export const EMPTY_EXPORT_RUNTIME: FigNodeChangeExportRuntime = {
   shapeText: () => null,
-  textDecorations: () => []
+  textDecorations: () => [],
+  fontStyleName: standardFaceNamer
 }

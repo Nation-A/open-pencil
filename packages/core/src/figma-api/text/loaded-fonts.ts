@@ -1,33 +1,47 @@
 import { uniqBy } from 'es-toolkit/array'
 
-import type { SceneNode } from '@open-pencil/scene-graph'
+import type { CharacterStyleOverride, SceneNode } from '@open-pencil/scene-graph'
 
-import { weightToStyleName } from '#core/figma-api/fonts'
-import type { FontFaceRef } from '#core/text/face'
+import { textStyleName } from '#core/text/font/names'
 import { fontManager } from '#core/text/fonts'
 import { textFontFace } from '#core/text/requirements'
 
-/**
- * A face as Figma names it in its messages, as `fontName` reads it: "Semi Bold", not "SemiBold",
- * and a weight between named ones by the nearest, as the font manager loads it.
- */
-function described(face: FontFaceRef): { family: string; style: string } {
-  const weight = Math.round(face.weight / 100) * 100
-  return { family: face.family, style: weightToStyleName(weight, face.italic) }
+/** A face text draws in, and its name as Figma names it in its messages. */
+interface DescribedFace {
+  family: string
+  /** The style the font manager loads the face as. */
+  loadStyle: string
+  /** The face's own name, as `fontName` reads it. */
+  style: string
 }
 
-function loadHint({ family, style }: { family: string; style: string }): string {
+/** The face characters with `style` over the text draw in, named as the text names it. */
+function describedFace(node: SceneNode, style: CharacterStyleOverride = {}): DescribedFace {
+  const face = textFontFace(node, style)
+  const name = textStyleName({
+    fontFamily: face.family,
+    fontWeight: face.weight,
+    italic: face.italic,
+    fontStyle: style.fontStyle !== undefined ? style.fontStyle : node.fontStyle
+  })
+  return { family: face.family, loadStyle: face.style, style: name }
+}
+
+function loadHint({ family, style }: DescribedFace): string {
   return `Please call figma.loadFontAsync({ family: "${family}", style: "${style}" }) and await the returned promise first.`
 }
 
-function isLoaded(face: FontFaceRef): boolean {
-  return fontManager.isStyleLoaded(face.family, face.style)
+function isLoaded(face: DescribedFace): boolean {
+  return fontManager.isStyleLoaded(face.family, face.loadStyle)
 }
 
 /** Every face the text draws in: its own and each style run's. */
-function textFaces(node: SceneNode): FontFaceRef[] {
-  const faces = [textFontFace(node), ...node.styleRuns.map((run) => textFontFace(node, run.style))]
-  return uniqBy(faces, (face) => `${face.family}\0${face.style}`)
+function textFaces(node: SceneNode): DescribedFace[] {
+  const faces = [
+    describedFace(node),
+    ...node.styleRuns.map((run) => describedFace(node, run.style))
+  ]
+  return uniqBy(faces, (face) => `${face.family}\0${face.loadStyle}`)
 }
 
 /**
@@ -36,18 +50,21 @@ function textFaces(node: SceneNode): FontFaceRef[] {
  * the edit's own arguments first, as Figma does.
  */
 export function assertTextFontsLoaded(method: string, node: SceneNode): void {
-  const unloaded = textFaces(node).find((face) => !isLoaded(face))
-  if (!unloaded) return
-  const font = described(unloaded)
+  const font = textFaces(node).find((face) => !isLoaded(face))
+  if (!font) return
   throw new Error(
     `in ${method}: Cannot write to node with unloaded font "${font.family} ${font.style}". ${loadHint(font)}`
   )
 }
 
 /** Figma refuses a font that is not loaded yet, before it checks the text's own. */
-export function assertFontLoaded(method: string, face: FontFaceRef): void {
-  if (isLoaded(face)) return
-  const font = described(face)
+export function assertFontLoaded(
+  method: string,
+  node: SceneNode,
+  style: CharacterStyleOverride
+): void {
+  const font = describedFace(node, style)
+  if (isLoaded(font)) return
   throw new Error(
     `in ${method}: Cannot use unloaded font "${font.family} ${font.style}". ${loadHint(font)}`
   )

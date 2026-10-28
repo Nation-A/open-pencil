@@ -10,7 +10,7 @@ import type {
   TextListType,
   TextParagraphSpacingField
 } from '@open-pencil/scene-graph'
-import { FONT_WEIGHT_NAMES, weightToStyle } from '@open-pencil/scene-graph/font-style'
+import { weightToStyle } from '@open-pencil/scene-graph/font-style'
 import { shapeWithTextLabel } from '@open-pencil/scene-graph/generated'
 
 import {
@@ -72,11 +72,9 @@ export function createTypographyState(editor: Editor) {
   const fontFamily = computed(() => node.value?.fontFamily ?? '')
   const fontWeight = computed(() => node.value?.fontWeight ?? 400)
   const fontSize = computed(() => node.value?.fontSize ?? 16)
-  const currentWeightLabel = computed(
-    () => FONT_WEIGHT_NAMES[node.value?.fontWeight ?? 400] ?? 'Regular'
-  )
+  const { weights, supports, styleName } = useFamilyFaces(nodes)
+  const currentWeightLabel = computed(() => (node.value ? styleName(node.value) : 'Regular'))
   const activeFormatting = computed(() => sharedFormatting(nodes.value))
-  const { weights, supports } = useFamilyFaces(nodes)
   /**
    * The list style every selected text shares, or that of the paragraphs being edited; `null`
    * when they differ.

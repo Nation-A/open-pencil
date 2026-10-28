@@ -2,12 +2,10 @@ import { uniq, uniqBy } from 'es-toolkit/array'
 
 import type { FontVariation } from '@open-pencil/scene-graph'
 import type { FontFamilyStyle } from '@open-pencil/scene-graph/font-style'
-import {
-  FONT_WEIGHT_NAMES,
-  parseFontStyle,
-  weightToStyle
-} from '@open-pencil/scene-graph/font-style'
+import { parseFontStyle, weightToStyle } from '@open-pencil/scene-graph/font-style'
 
+import type { FaceWeight } from '#core/text/font/faces'
+import { namedFace } from '#core/text/font/names'
 import {
   namedInstanceVariations,
   type FontAxis,
@@ -18,11 +16,6 @@ import { fontManager } from '#core/text/fonts'
 /** A font as Figma reads one; a variable font's also lists every axis it is drawn at. */
 export type FigmaFontName = FontFamilyStyle & { variationSettings?: FigmaVariationSettings }
 export type FigmaFont = { fontName: FigmaFontName }
-
-export function weightToStyleName(weight: number, italic: boolean): string {
-  const base = FONT_WEIGHT_NAMES[weight] ?? 'Regular'
-  return italic ? `${base} Italic` : base
-}
 
 /**
  * The style name text asks the font manager for, whichever way a script spells it ("Italic",
@@ -51,7 +44,7 @@ export async function loadFigmaFont({ family, style }: FigmaFontNameInput): Prom
     if (!fontManager.isStyleLoaded(family, face)) throw fontLoadError(family, style)
     return
   }
-  const faces = (await fontManager.familyFaces(family).catch(() => null)) ?? [
+  const faces: FaceWeight[] = (await fontManager.familyFaces(family).catch(() => null)) ?? [
     { weight: 400, italic: false }
   ]
   const load = (face: string) => fontManager.loadFont(family, face).catch(() => null)
@@ -187,7 +180,7 @@ export function fontNameInputStyle(
   method: string,
   input: FigmaFontNameInput,
   current?: CurrentFont
-): { fontFamily: string; fontWeight: number; italic: boolean; fontVariations: FontVariation[] } {
+) {
   const settings = input.variationSettings ?? {}
   const tags = Object.keys(settings)
   const slanted = parseFontStyle(input.style ?? current?.style ?? 'Regular').italic
@@ -202,12 +195,14 @@ export function fontNameInputStyle(
       : undefined) ??
     current?.style ??
     'Regular'
-  const { weight, italic } = parseFontStyle(style)
+  const face = namedFace(input.family, style)
   return {
     fontFamily: input.family,
-    fontWeight: weight,
+    fontWeight: face.weight,
     // A style picked from the axes keeps the text's slant, whichever file the axes came from.
-    italic: input.style ? italic : slanted,
+    italic: input.style ? face.italic : slanted,
+    // An instance of the other slant names no face of this one; the family's own name does.
+    fontStyle: input.style !== undefined || face.italic === slanted ? face.style : null,
     // A style resets the axes to its own; without one, the axes the text set stay.
     fontVariations: [
       ...(input.style ? [] : (current?.fontVariations ?? [])).filter(

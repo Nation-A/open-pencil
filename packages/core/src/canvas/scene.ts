@@ -760,7 +760,8 @@ function drawRegularStroke(
 
 /**
  * Strokes a vector's paths on the side its alignment takes, as a shape's stroke is: a centred
- * stroke twice as wide, kept inside the paths for `INSIDE` and outside them for `OUTSIDE`.
+ * stroke twice as wide, kept inside the paths for `INSIDE` and outside them for `OUTSIDE`. Open
+ * paths enclose nothing to take a side of, so a vector without closed regions strokes centred.
  */
 function drawAlignedVectorPathStrokes(
   r: SkiaRenderer,
@@ -770,7 +771,7 @@ function drawAlignedVectorPathStrokes(
   stroke: SceneNode['strokes'][0],
   sc: Color
 ): void {
-  if (stroke.align === 'CENTER') {
+  if (stroke.align === 'CENTER' || !node.vectorNetwork?.regions.length) {
     const outlineKey = strokeOutlineKey(node, stroke, 'regions')
     drawVectorPathStrokes(r, canvas, vectorPaths, stroke, sc, node.strokeMiterLimit, outlineKey)
     return

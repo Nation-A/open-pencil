@@ -32,14 +32,21 @@ const SQUARE: VectorNetwork = {
   regions: [{ windingRule: 'NONZERO', loops: [[0, 1, 2, 3]] }]
 }
 
-/** Whether the square's 8 px stroke inks the row through its middle `x` px from its left edge. */
-function inks(align: Stroke['align']): (x: number) => boolean {
+/** The square's first three sides, open, with no region to fill. */
+const OPEN: VectorNetwork = {
+  vertices: SQUARE.vertices,
+  segments: SQUARE.segments.slice(0, 3),
+  regions: []
+}
+
+/** Whether the shape's 8 px stroke inks the row through its middle `x` px from its left edge. */
+function inks(align: Stroke['align'], network = SQUARE): (x: number) => boolean {
   const graph = new SceneGraph()
   const page = graph.getPages()[0]
   const vector = graph.createNode('VECTOR', page.id, {
     width: SIDE,
     height: SIDE,
-    vectorNetwork: SQUARE,
+    vectorNetwork: network,
     fills: [],
     strokes: [
       {
@@ -92,4 +99,12 @@ test('a vector stroked from its path keeps the stroke on the side its alignment 
   expect([inside(2), inside(6), inside(10)]).toEqual([true, true, false])
   const outside = inks('OUTSIDE')
   expect([outside(-6), outside(2), outside(6)]).toEqual([true, false, false])
+})
+
+// An open path encloses nothing to take a side of, so its stroke stays centred at its weight.
+test('an open vector path strokes centred whatever its alignment', () => {
+  for (const align of ['INSIDE', 'OUTSIDE'] as const) {
+    const open = inks(align, OPEN)
+    expect([open(34), open(38), open(42), open(46)]).toEqual([false, true, true, false])
+  }
 })

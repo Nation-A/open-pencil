@@ -1,0 +1,1 @@
+- Text nodes and style runs have a `fontStyle` face name, family faces carry a `style`, `FONT_WEIGHT_NAMES` uses Google Fonts' names ("SemiBold"), and `weightToStyleName` and `weightToFigmaStyle` are removed.

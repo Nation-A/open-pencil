@@ -3,6 +3,7 @@ import { uniq } from 'es-toolkit/array'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '@open-pencil/core/io'
 
+import { embedded } from '@/app/embedded'
 import { setOpenPencilOpenFileHandler } from '@/app/browser-bridge'
 import {
   resolveBrowserFileURL,
@@ -150,6 +151,7 @@ export async function activateTabForPath(path: string): Promise<boolean> {
 }
 
 export async function openFileDialog() {
+  if (embedded.value) return // workos: the host owns the document
   if (isTauri()) {
     const paths = await chooseTauriOpenPaths()
     await openDesignFileBatch(paths, (path) => path.split(/[/\\]/).pop() ?? path, openFileFromPath)

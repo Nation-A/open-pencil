@@ -29,6 +29,7 @@ import { useDocumentDrop } from '@/app/shell/document-drop'
 import { useKeyboard } from '@/app/shell/keyboard/use'
 import { useEditorMenu } from '@/app/shell/menu/use'
 import { toast } from '@/app/shell/ui'
+import { embedded } from '@/app/embedded'
 import {
   activeTab,
   closeTab,
@@ -253,12 +254,12 @@ onUnmounted(() => {
 
 <template>
   <div data-test-id="editor-root" class="flex h-screen w-screen flex-col">
-    <FileApiBanner />
+    <FileApiBanner v-if="!embedded" />
     <ColorSpaceBanner />
     <FontStatusBanner />
     <RenameSelectionDialog />
     <CommandPalette />
-    <TabBar />
+    <TabBar v-if="!embedded" />
     <HomeWorkspace v-show="activeTab?.kind === 'home'" @new-document="createDocumentInCurrentTab" />
     <EditorWorkspace
       v-if="activeTab && activeTab.kind !== 'home'"

@@ -7,6 +7,7 @@ import { createNavigationBenchmarkHooks } from '@/app/performance/navigation/hoo
 import type { NavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
 import { appRuntimeConfig } from '@/app/runtime/config'
+import { setEmbedded } from '@/app/embedded'
 import { IS_BROWSER } from '@/constants'
 
 export interface OpenPencilTestHooks {
@@ -43,6 +44,8 @@ export interface OpenPencilCollabHost {
 }
 
 export interface OpenPencilWindowAPI {
+  /** workos: hides file-management UI (banner, tab strip, New/Open/Save As) for a host that owns the document. */
+  setEmbedded?: (embedded: boolean) => void
   /** workos: replaces Trystero for every room joined afterwards. Pass null to restore it. */
   setCollabTransport?: (join: JoinCollabRoom | null) => void
   collabHost?: OpenPencilCollabHost
@@ -56,6 +59,7 @@ let activeStore: EditorStore | null = null
 
 function windowAPI(): OpenPencilWindowAPI {
   window.openPencil ??= {}
+  window.openPencil.setEmbedded ??= setEmbedded
   window.openPencil.getStore ??= () => {
     if (!activeStore) throw new Error('OpenPencil store not initialized')
     return activeStore

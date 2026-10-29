@@ -5,6 +5,7 @@ import type { RoomStatus } from '@/app/collab/room/status'
 import type { EditorStore } from '@/app/editor/session/create'
 import { createNavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import type { NavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
+import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
 import { appRuntimeConfig } from '@/app/runtime/config'
 import { IS_BROWSER } from '@/constants'
 
@@ -29,7 +30,22 @@ export interface OpenPencilTestHooks {
   automation?: (command: string, args: unknown) => Promise<unknown>
 }
 
+/** workos: room control a host page drives in production builds. */
+export interface OpenPencilCollabHost {
+  /** Puts the active tab's document into a room (a generated ID when none is given); null if there is no document. */
+  shareCurrentDoc: (roomId?: string) => string | null
+  /** Opens a room in a tab of its own, as pasting its link does. */
+  joinRoom: (roomId: string) => boolean
+  leave: () => void
+  setLocalName: (name: string) => void
+  peerCount: () => number
+  status: () => RoomStatus | null
+}
+
 export interface OpenPencilWindowAPI {
+  /** workos: replaces Trystero for every room joined afterwards. Pass null to restore it. */
+  setCollabTransport?: (join: JoinCollabRoom | null) => void
+  collabHost?: OpenPencilCollabHost
   getStore?: () => EditorStore
   setChatTransport?: (factory: () => ChatTransport<UIMessage>) => void
   openFile?: (path: string) => Promise<void>
@@ -101,4 +117,19 @@ export function exposeChatTransportOverride(
 
 export function setOpenPencilOpenFileHandler(openFile: (path: string) => Promise<void>) {
   windowAPI().openFile = openFile
+}
+
+/** workos: lets a host page supply the collaboration transport and start or join rooms. */
+export function exposeCollabHost(collab: CollabReturn, joinRoom: (roomId: string) => boolean) {
+  if (!IS_BROWSER) return
+  const api = windowAPI()
+  api.setCollabTransport = setCollabTransportOverride
+  api.collabHost = {
+    shareCurrentDoc: (roomId) => collab.shareCurrentDoc(roomId),
+    joinRoom,
+    leave: collab.disconnect,
+    setLocalName: collab.setLocalName,
+    peerCount: () => collab.remotePeers.value.length,
+    status: () => collab.state.value.status
+  }
 }

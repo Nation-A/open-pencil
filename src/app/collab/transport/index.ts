@@ -8,7 +8,18 @@ function usesTestTransport(): boolean {
   return import.meta.env.DEV && appRuntimeConfig.collaborationTransport === 'test'
 }
 
+/** workos: a host page can supply the transport (its own relay) instead of Trystero. */
+let injectedJoin: JoinCollabRoom | null = null
+
+export function setCollabTransportOverride(join: JoinCollabRoom | null): void {
+  injectedJoin = join
+}
+
 export const joinCollabRoom: JoinCollabRoom = (roomId) =>
-  usesTestTransport() ? joinTestCollabRoom(roomId) : joinTrysteroCollabRoom(roomId)
+  injectedJoin
+    ? injectedJoin(roomId)
+    : usesTestTransport()
+      ? joinTestCollabRoom(roomId)
+      : joinTrysteroCollabRoom(roomId)
 
 export type { CollabActionReceiver, CollabRoomTransport, JoinCollabRoom } from './types'

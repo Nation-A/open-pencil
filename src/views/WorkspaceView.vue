@@ -13,7 +13,7 @@ import {
 import { exposeAutomationTestRequests } from '@/app/automation/bridge/test-hooks'
 import { startMCPRuntime, stopMCPRuntime } from '@/app/automation/mcp/runtime'
 import { startWebMCP } from '@/app/automation/webmcp/runtime'
-import { exposeCollaborationActions } from '@/app/browser-bridge'
+import { exposeCollabHost, exposeCollaborationActions } from '@/app/browser-bridge'
 import { useJoinRoom } from '@/app/collab/join'
 import { bindDesktopRoomLinks } from '@/app/collab/room/links'
 import { syncRoomRoute } from '@/app/collab/route'
@@ -115,6 +115,7 @@ useDocumentDrop()
 const collab = useCollab()
 provide(COLLAB_KEY, collab)
 exposeCollaborationActions(collab, joinRoomFromInput)
+exposeCollabHost(collab, joinRoomFromInput)
 exposeAutomationTestRequests()
 syncRoomRoute(router, route)
 

@@ -108,22 +108,30 @@ const agentHistoryReadOnly = computed(
 let queueHeld = false
 async function historyAction(action: () => Promise<unknown>) {
   const generation = ++viewGeneration
+  const left = history.current.value?.id
+  let switched = false
   submission.cancel()
   queueHeld = true
   try {
     await chat.value?.stop()
     await action()
-    if (generation !== viewGeneration) return
-    chat.value = null
-    // Waiting messages belong to the conversation that was left; a failed switch keeps them.
-    clearQueuedMessages()
+    switched = true
   } catch {
     toast.error(ai.value.chatHistoryFailed)
   } finally {
     queueHeld = false
-    // The stopped reply may have ended while the switch held the queue, which then waits for
-    // no reply to end.
-    if (status.value === 'ready') sendNextQueued()
+    if (generation === viewGeneration) {
+      // Waiting messages belong to the conversation that was left, which a switch failing part
+      // way, after it opened another, has left too; a switch that failed before keeps them.
+      if (switched || history.current.value?.id !== left) {
+        chat.value = null
+        clearQueuedMessages()
+      } else if (status.value === 'ready') {
+        // The stopped reply may have ended while the switch held the queue, which then waits
+        // for no reply to end.
+        sendNextQueued()
+      }
+    }
   }
 }
 

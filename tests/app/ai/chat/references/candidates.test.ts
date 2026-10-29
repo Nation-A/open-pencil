@@ -27,7 +27,7 @@ describe('reference candidates', () => {
     ).toEqual([
       ['node', 'Summary', null],
       ['node', 'Hero', 'Page 1'],
-      ['node', 'Title', 'Page 1'],
+      ['node', 'Title', 'Hero · Page 1'],
       ['page', 'Page 1', null],
       ['page', 'Checkout', null],
       ['skill', 'grid', null]

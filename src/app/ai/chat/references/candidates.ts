@@ -1,3 +1,5 @@
+import { compact } from 'es-toolkit'
+
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 
 import type { AgentCommand } from '@/app/ai/agents/acp/commands'
@@ -9,7 +11,10 @@ import type { ChatReference } from './link'
 /** Matching layers past this many are left out of `@` completions; typing more narrows them. */
 const MAX_LAYERS = 500
 
-/** Something `@` can insert, with what to show beside it: a layer's page. */
+/**
+ * Something `@` can insert, with what to show beside it: a layer's parent and, off the current
+ * page, its page, so layers with the same name can be told apart.
+ */
 export interface ReferenceCandidate {
   reference: ChatReference
   detail: string | null
@@ -46,20 +51,20 @@ export function referenceCandidates(
     ...pages.filter((page) => page.id !== currentPageId)
   ]
   const layers: ReferenceCandidate[] = []
-  const walk = (parentId: string, pageName: string | null) => {
+  const walk = (parentId: string, parentName: string | null, pageName: string | null) => {
     for (const child of graph.getChildren(parentId)) {
       if (layers.length >= MAX_LAYERS) return
       if (fits(child.name)) {
         layers.push({
           reference: { kind: 'node', id: child.id, label: child.name },
-          detail: pageName,
+          detail: compact([parentName, pageName]).join(' · ') || null,
           node: child
         })
       }
-      walk(child.id, pageName)
+      walk(child.id, child.name, pageName)
     }
   }
-  for (const page of ordered) walk(page.id, page.id === currentPageId ? null : page.name)
+  for (const page of ordered) walk(page.id, null, page.id === currentPageId ? null : page.name)
   return [
     ...layers,
     ...pages

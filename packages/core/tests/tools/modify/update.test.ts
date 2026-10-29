@@ -20,7 +20,8 @@ describe('update_node', () => {
     expect(layer.width).toBe(30)
   })
 
-  test('reports an auto layout frame that stops hugging at the size it had', async () => {
+  // Figma 126: a resize to the size a layer has changes nothing; a new width fixes only the width.
+  test('reports what a width-only resize changes on an auto layout frame', async () => {
     const figma = new FigmaAPI(new SceneGraph())
     const stack = figma.createFrame()
     stack.layoutMode = 'VERTICAL'
@@ -30,23 +31,24 @@ describe('update_node', () => {
     item.resize(40, 20)
     stack.appendChild(item)
 
-    const result = await updateNode.execute(figma, { id: stack.id, width: stack.width })
+    const same = await updateNode.execute(figma, { id: stack.id, width: stack.width })
+    expect(same).toEqual({ id: stack.id, updated: [] })
+    const wider = await updateNode.execute(figma, { id: stack.id, width: stack.width + 20 })
 
-    expect(result).toEqual({
-      id: stack.id,
-      updated: ['layoutSizingHorizontal', 'layoutSizingVertical']
-    })
-    expect([stack.layoutSizingHorizontal, stack.layoutSizingVertical]).toEqual(['FIXED', 'FIXED'])
+    expect(wider).toEqual({ id: stack.id, updated: ['size', 'layoutSizingHorizontal'] })
+    expect([stack.layoutSizingHorizontal, stack.layoutSizingVertical]).toEqual(['FIXED', 'HUG'])
   })
 
-  test('reports a text that stops sizing itself at the size it had', async () => {
+  test('reports what a width-only resize changes on an auto-width text', async () => {
     const figma = new FigmaAPI(new SceneGraph())
     const text = figma.createText()
     text.characters = 'Label'
 
-    const result = await updateNode.execute(figma, { id: text.id, width: text.width })
+    const same = await updateNode.execute(figma, { id: text.id, width: text.width })
+    expect(same).toEqual({ id: text.id, updated: [] })
+    const wider = await updateNode.execute(figma, { id: text.id, width: text.width + 20 })
 
-    expect(result).toEqual({ id: text.id, updated: ['textAutoResize'] })
-    expect(text.textAutoResize).toBe('NONE')
+    expect(wider).toEqual({ id: text.id, updated: ['size', 'textAutoResize'] })
+    expect(text.textAutoResize).toBe('HEIGHT')
   })
 })

@@ -116,3 +116,42 @@ describe('resize to the size a layer has', () => {
     expect(hasInstanceOverride(graph, instance.id, 'height')).toBe(true)
   })
 })
+
+describe('sizing after a resize', () => {
+  function stack(figma: FigmaAPI) {
+    const frame = figma.createFrame()
+    frame.layoutMode = 'HORIZONTAL'
+    frame.primaryAxisSizingMode = 'AUTO'
+    frame.counterAxisSizingMode = 'AUTO'
+    const item = figma.createRectangle()
+    item.resize(40, 20)
+    frame.appendChild(item)
+    return frame
+  }
+
+  test('auto layout stops hugging only along an axis whose size changes', () => {
+    const figma = new FigmaAPI(new SceneGraph())
+    const same = stack(figma)
+    same.resize(same.width, same.height)
+    expect([same.primaryAxisSizingMode, same.counterAxisSizingMode]).toEqual(['AUTO', 'AUTO'])
+    const wider = stack(figma)
+    wider.resize(60, wider.height)
+    expect([wider.primaryAxisSizingMode, wider.counterAxisSizingMode]).toEqual(['FIXED', 'AUTO'])
+  })
+
+  test('a text keeps sizing itself along the sides a resize leaves alone', () => {
+    const figma = new FigmaAPI(new SceneGraph())
+    const after = (mode: 'WIDTH_AND_HEIGHT' | 'HEIGHT', width: number, height: number) => {
+      const text = figma.createText()
+      text.characters = 'Label'
+      text.textAutoResize = mode
+      text.resize(text.width + width, text.height + height)
+      return text.textAutoResize
+    }
+    expect(after('WIDTH_AND_HEIGHT', 0, 0)).toBe('WIDTH_AND_HEIGHT')
+    expect(after('WIDTH_AND_HEIGHT', 20, 0)).toBe('HEIGHT')
+    expect(after('WIDTH_AND_HEIGHT', 0, 10)).toBe('NONE')
+    expect(after('HEIGHT', 20, 0)).toBe('HEIGHT')
+    expect(after('HEIGHT', 0, 10)).toBe('NONE')
+  })
+})

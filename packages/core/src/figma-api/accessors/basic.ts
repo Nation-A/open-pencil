@@ -1,4 +1,4 @@
-import { isEmptyObject, pickBy } from 'es-toolkit'
+import { isEmptyObject } from 'es-toolkit'
 
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { getAxisAlignedWorldBounds, getWorldMatrix } from '@open-pencil/scene-graph/coordinate'
@@ -325,6 +325,36 @@ function resizedSize(
   }
 }
 
+interface ChangedSides {
+  width: boolean
+  height: boolean
+}
+
+/** Auto layout given a new size on an axis stops hugging along it, as in Figma; the other keeps on. */
+function resizedLayoutSizing(node: SceneNode, changed: ChangedSides): Partial<SceneNode> {
+  if (node.layoutMode !== 'HORIZONTAL' && node.layoutMode !== 'VERTICAL') return {}
+  const row = node.layoutMode === 'HORIZONTAL'
+  const sizing: Partial<SceneNode> = {}
+  if ((row ? changed.width : changed.height) && node.primaryAxisSizing !== 'FIXED')
+    sizing.primaryAxisSizing = 'FIXED'
+  if ((row ? changed.height : changed.width) && node.counterAxisSizing !== 'FIXED')
+    sizing.counterAxisSizing = 'FIXED'
+  return sizing
+}
+
+/**
+ * How a text sizes itself after a resize, as in Figma: a new height fixes it, and a new width alone
+ * leaves auto-width text sizing only its height.
+ */
+function resizedTextSizing(node: SceneNode, changed: ChangedSides): Partial<SceneNode> {
+  if (node.type !== 'TEXT') return {}
+  const mode = node.textAutoResize
+  if (changed.height && (mode === 'HEIGHT' || mode === 'WIDTH_AND_HEIGHT'))
+    return { textAutoResize: 'NONE' }
+  if (changed.width && mode === 'WIDTH_AND_HEIGHT') return { textAutoResize: 'HEIGHT' }
+  return {}
+}
+
 /**
  * Resizes a node keeping its top-left corner, as Figma's does, though it turns about its center.
  * `resize` places the layers inside by their constraints, as Figma's does, without making their
@@ -352,40 +382,21 @@ function resizeNode(
       ? new Map(descendants(scene, node).map((child) => [child.id, createResizeSnapshot(child)]))
       : new Map<string, ResizeSnapshot>()
   const geometry = resizedVectorGeometry(node, width, height)
-  // Text given a size stops sizing itself to its content, as in Figma.
-  const fixesText =
-    node.type === 'TEXT' &&
-    (node.textAutoResize === 'WIDTH_AND_HEIGHT' || node.textAutoResize === 'HEIGHT')
   // A locked ratio does not hold here; it takes the new size, as in Figma.
   const recaptured = recapturedAspectRatio(node, width, height)
-  // Auto layout given a size keeps it, as in Figma: hugging axes become fixed.
-  const fixed = node.layoutMode === 'HORIZONTAL' || node.layoutMode === 'VERTICAL'
-  const sizing = fixed
-    ? pickBy(
-        { primaryAxisSizing: 'FIXED' as const, counterAxisSizing: 'FIXED' as const },
-        (value, key) => node[key] !== value
-      )
-    : {}
-  scene.updateNode(node.id, {
-    width,
-    height,
-    ...geometry,
-    ...recaptured,
-    ...sizing,
-    ...(fixesText ? { textAutoResize: 'NONE' as const } : {})
-  })
+  const changed = { width: width !== size.width, height: height !== size.height }
+  const sizing = { ...resizedLayoutSizing(node, changed), ...resizedTextSizing(node, changed) }
+  scene.updateNode(node.id, { width, height, ...geometry, ...recaptured, ...sizing })
   if (placed.size > 0 && size.width > 0 && size.height > 0) {
     const changes = computeConstrainedResizeChanges(scene, node.id, size, { width, height }, placed)
     for (const [id, change] of changes) scene.updateNode(id, change)
   }
   // A size the layer already has records nothing, as in Figma; a new one records both sides.
-  const resized = width !== size.width || height !== size.height
   recordInstanceOverride(scene, node.id, [
-    ...(resized ? ['width', 'height'] : []),
+    ...(changed.width || changed.height ? ['width', 'height'] : []),
     ...Object.keys(geometry),
     ...Object.keys(recaptured),
-    ...Object.keys(sizing),
-    ...(fixesText ? ['textAutoResize'] : [])
+    ...Object.keys(sizing)
   ])
   setTransform(target, internals, () => before)
 }

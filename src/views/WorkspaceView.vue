@@ -31,6 +31,7 @@ import { useEditorMenu } from '@/app/shell/menu/use'
 import { toast } from '@/app/shell/ui'
 import {
   activeTab,
+  closeTab,
   createDocumentInCurrentTab,
   createHomeTab,
   createTab,
@@ -115,7 +116,15 @@ useDocumentDrop()
 const collab = useCollab()
 provide(COLLAB_KEY, collab)
 exposeCollaborationActions(collab, joinRoomFromInput)
-exposeCollabHost(collab, joinRoomFromInput)
+exposeCollabHost(collab, (roomId) => {
+  // workos: a host page opens one document per frame, so the room replaces the tab it was opened over.
+  const previous = activeTab.value
+  const joined = joinRoomFromInput(roomId)
+  if (joined && previous && previous.kind === 'document' && previous.id !== activeTab.value?.id) {
+    void closeTab(previous.id, 'discard')
+  }
+  return joined
+})
 exposeAutomationTestRequests()
 syncRoomRoute(router, route)
 

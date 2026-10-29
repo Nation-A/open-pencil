@@ -39,7 +39,12 @@ import type {
   AppMenuGroupSchema,
   AppMenuIcon
 } from '@/app/shell/menu/schema'
-import { embedded, EMBEDDED_HIDDEN_MENU_IDS } from '@/app/embedded'
+import {
+  embedded,
+  embeddedLocalFiles,
+  EMBEDDED_HIDDEN_MENU_IDS,
+  EMBEDDED_LOCAL_FILE_MENU_IDS
+} from '@/app/embedded'
 import { APP_MENU_SCHEMA } from '@/app/shell/menu/schema'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { openFileDialog } from '@/app/shell/menu/use'
@@ -82,7 +87,9 @@ function shortcutKeys(shortcut: string | undefined): string[] | undefined {
 }
 
 function isVisible(entry: { target?: string; id?: string }): boolean {
-  if (embedded.value && entry.id && EMBEDDED_HIDDEN_MENU_IDS.has(entry.id)) return false
+  if (embedded.value && entry.id && EMBEDDED_HIDDEN_MENU_IDS.has(entry.id)) {
+    if (!(embeddedLocalFiles.value && EMBEDDED_LOCAL_FILE_MENU_IDS.has(entry.id))) return false
+  }
   return entry.target !== 'native'
 }
 

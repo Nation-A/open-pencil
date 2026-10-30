@@ -19,6 +19,7 @@ export * from '#core/text/font/style'
 export * from '#core/text/font/variation'
 import { fontFallbackEntry } from '#core/text/fallbacks'
 import type { FontFallbackScript } from '#core/text/fallbacks'
+import { fontDataHasGlyph } from '#core/text/font/parsed'
 import { UnsupportedFontFormatError } from '#core/text/font/sources'
 import type {
   DownloadedFontCache,
@@ -41,6 +42,7 @@ const BUNDLED_FONTS: Record<string, string> = {
   'Inter|SemiBold': '/Inter-SemiBold.ttf',
   'Inter|Bold': '/Inter-Bold.ttf',
   'Inter|ExtraBold': '/Inter-ExtraBold.ttf',
+  'Noto Sans CJK KR|Regular': '/NotoSansCJKkr-Regular.otf',
   'Noto Naskh Arabic|Regular': '/NotoNaskhArabic-Regular.ttf'
 }
 
@@ -574,6 +576,22 @@ export class FontManager {
     }
   }
 
+  private async loadBundledKoreanFallback(
+    targetFamilies: string[],
+    characters: string,
+    signal?: AbortSignal
+  ): Promise<boolean> {
+    // Complete, unmodified OFL font: no external provider or local-font permission required.
+    const family = 'Noto Sans CJK KR'
+    const bytes = await this.loadLocalFont(family, 'Regular')
+    signal?.throwIfAborted()
+    if (!bytes) return false
+    if (!targetFamilies.includes(family)) targetFamilies.push(family)
+    return Array.from(characters).every(
+      (character) => /\s/u.test(character) || fontDataHasGlyph(bytes, character)
+    )
+  }
+
   private async ensureFallbackFamilies(
     script: FontFallbackScript,
     targetFamilies: string[],
@@ -583,6 +601,12 @@ export class FontManager {
   ): Promise<string[]> {
     signal?.throwIfAborted()
     const manifest = fontFallbackEntry(script, this.fallbackUserAgent)
+    if (
+      script === 'cjk-kr' &&
+      (await this.loadBundledKoreanFallback(targetFamilies, characters, signal))
+    ) {
+      return targetFamilies
+    }
 
     for (const family of manifest.localFamilies) {
       signal?.throwIfAborted()

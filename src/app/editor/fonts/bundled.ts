@@ -4,6 +4,7 @@ import interMedium from '@open-pencil/core/assets/Inter-Medium.ttf?url'
 import interRegular from '@open-pencil/core/assets/Inter-Regular.ttf?url'
 import interSemiBold from '@open-pencil/core/assets/Inter-SemiBold.ttf?url'
 import notoNaskhArabic from '@open-pencil/core/assets/NotoNaskhArabic-Regular.ttf?url'
+import notoSansCJKkr from '@open-pencil/core/assets/NotoSansCJKkr-Regular.otf?url'
 import { fontManager } from '@open-pencil/core/text'
 
 /**
@@ -18,6 +19,7 @@ const BUNDLED_FONT_URLS: Record<string, string> = {
   'Inter-SemiBold.ttf': interSemiBold,
   'Inter-Bold.ttf': interBold,
   'Inter-ExtraBold.ttf': interExtraBold,
+  'NotoSansCJKkr-Regular.otf': notoSansCJKkr,
   'NotoNaskhArabic-Regular.ttf': notoNaskhArabic
 }
 

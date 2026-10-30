@@ -1,0 +1,5 @@
+Noto Sans CJK KR Regular
+Copyright 2014-2021 Adobe (http://www.adobe.com/), Reserved Font Name Source.
+Licensed under SIL Open Font License 1.1; see NotoSansCJKkr-OFL.txt.
+Unmodified complete static font from notofonts/noto-cjk at f8d157532fbfaeda587e826d4cd5b21a49186f7c
+SHA-256 6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a

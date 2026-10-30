@@ -1,8 +1,10 @@
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 
 import { DEFAULT_FONT_FAMILY } from '#core/constants'
+import { styleForCharacter } from '#core/text/coverage'
 import type { FontLoadedSource, FontUnavailableReason } from '#core/text/font/sources'
 import { fontManager, type FontManager } from '#core/text/fonts'
+import { fontGlyphCoverageSync } from '#core/text/opentype'
 import { collectNodeFontFaces } from '#core/text/requirements'
 
 export type FontFaceStatus = 'available' | 'substituted' | 'unresolved'
@@ -30,6 +32,7 @@ interface MutableFontFaceUse {
   style: string
   nodeIds: Set<string>
   nodeNames: Set<string>
+  characters: Set<string>
 }
 
 function faceKey(family: string, style: string): string {
@@ -51,11 +54,18 @@ function collectFaceUses(graph: SceneGraph, rootIds: readonly string[]): Mutable
         family,
         style,
         nodeIds: new Set<string>(),
-        nodeNames: new Set<string>()
+        nodeNames: new Set<string>(),
+        characters: new Set<string>()
       }
       use.nodeIds.add(node.id)
       use.nodeNames.add(node.name)
       uses.set(key, use)
+    }
+    let offset = 0
+    for (const character of node.text) {
+      const face = styleForCharacter(node, offset)
+      uses.get(faceKey(face.family, face.style))?.characters.add(character)
+      offset += character.length
     }
   }
   return [...uses.values()]
@@ -64,12 +74,31 @@ function collectFaceUses(graph: SceneGraph, rootIds: readonly string[]): Mutable
 function faceStatus(use: MutableFontFaceUse, manager: FontManager): DocumentFontFaceStatus {
   const exactSource = manager.loadedFontSource(use.family, use.style)
   if (exactSource) {
+    let substituteFamily: string | null = null
+    let uncovered = false
+    for (const character of use.characters) {
+      if (
+        /\s/u.test(character) ||
+        fontGlyphCoverageSync(use.family, use.style, character, manager) !== 'missing'
+      )
+        continue
+      const fallback = [
+        ...manager.getCJKFallbackFamilies(),
+        ...manager.getArabicFallbackFamilies(),
+        DEFAULT_FONT_FAMILY
+      ].find((family) => fontGlyphCoverageSync(family, 'Regular', character, manager) === 'has')
+      if (!fallback) uncovered = true
+      else substituteFamily ??= fallback
+    }
+    let status: FontFaceStatus = 'available'
+    if (uncovered) status = 'unresolved'
+    else if (substituteFamily) status = 'substituted'
     return {
       family: use.family,
       style: use.style,
-      status: 'available',
+      status,
       source: exactSource,
-      substituteFamily: null,
+      substituteFamily: uncovered ? null : substituteFamily,
       reason: null,
       nodeIds: [...use.nodeIds],
       nodeNames: [...use.nodeNames]

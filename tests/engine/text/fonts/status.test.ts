@@ -3,11 +3,69 @@ import { describe, expect, test } from 'bun:test'
 import { FontManager, SceneGraph, documentFontStatus } from '@open-pencil/core'
 import { UnsupportedFontFormatError } from '@open-pencil/core/text'
 
+import { fontGlyphCoverageSync } from '#core/text/opentype'
+
 function pageId(graph: SceneGraph): string {
   return graph.getPages()[0].id
 }
 
 describe('documentFontStatus', () => {
+  test('loads complete bundled Korean coverage without external font requests', async () => {
+    const manager = new FontManager()
+    let remoteRequests = 0
+    manager.setWebFontFetch(async () => {
+      remoteRequests++
+      throw new Error('offline')
+    })
+    const text = 'Synthetic hello 한글 123 한 ㄱㅎ'
+    const result = await manager.ensureFallbackPack(['cjk-kr'], text)
+    expect(result['cjk-kr']).toContain('Noto Sans CJK KR')
+    expect(remoteRequests).toBe(0)
+    let coveredSyllables = 0
+    for (let code = 0xac00; code <= 0xd7a3; code++) {
+      if (
+        fontGlyphCoverageSync(
+          'Noto Sans CJK KR',
+          'Regular',
+          String.fromCodePoint(code),
+          manager
+        ) === 'has'
+      )
+        coveredSyllables++
+    }
+    expect(coveredSyllables).toBe(11172)
+    for (const character of '한ㄱㅎ')
+      expect(fontGlyphCoverageSync('Noto Sans CJK KR', 'Regular', character, manager)).toBe('has')
+    manager.markLoaded(
+      'Inter',
+      'Regular',
+      await Bun.file('packages/core/assets/Inter-Regular.ttf').arrayBuffer()
+    )
+    const graph = new SceneGraph()
+    graph.createNode('TEXT', pageId(graph), { text, fontFamily: 'Inter' })
+    const status = documentFontStatus(graph, pageId(graph), manager)
+    expect(status.faithful).toBe(false)
+    expect(status.issues[0].status).toBe('substituted')
+    expect(status.issues[0].substituteFamily).toBe('Noto Sans CJK KR')
+  })
+
+  test('does not report a loaded Latin face as faithful when mixed Hangul has no fallback', async () => {
+    const manager = new FontManager()
+    manager.markLoaded(
+      'Inter',
+      'Regular',
+      await Bun.file('packages/core/assets/Inter-Regular.ttf').arrayBuffer()
+    )
+    const graph = new SceneGraph()
+    graph.createNode('TEXT', pageId(graph), {
+      text: 'Synthetic hello 한글 123',
+      fontFamily: 'Inter'
+    })
+    const status = documentFontStatus(graph, pageId(graph), manager)
+    expect(status.faithful).toBe(false)
+    expect(status.issues[0].status).toBe('unresolved')
+  })
+
   test('reports loaded faces and their source without false warnings', () => {
     const graph = new SceneGraph()
     const manager = new FontManager()

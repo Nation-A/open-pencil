@@ -177,6 +177,9 @@ export function nodeFontReadiness(r: FontReadinessRenderer, node: SceneNode): No
   // Substituted text still needs script fallbacks (for example CJK) for glyphs the substitute
   // lacks, but stays visible when none can be found.
   if (faces === 'substituted') return glyphs === 'pending' ? 'pending' : 'substituted'
+  // If no saved graphic can preserve missing glyphs, render the usable primary glyphs
+  // and notdef placeholders instead of making the whole mixed-script line disappear.
+  if (glyphs === 'exhausted' && !node.textPicture && !node.derivedTextGlyphs) return 'substituted'
   return glyphs
 }
 

@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer'
+import { readFile } from 'node:fs/promises'
 
 import type { Page } from '@playwright/test'
 
@@ -440,4 +441,59 @@ test('substituted fonts still request fallbacks for CJK text', async ({ page }) 
   const { image, ...state } = result
   expect(state).toEqual({ readiness: 'substituted', requestedCJK: true })
   expect(Buffer.from(image)).toMatchSnapshot('substituted-font-cjk-fallback.png')
+})
+
+test('bundled Korean renders mixed text offline and after FIG reopen', async ({ page }) => {
+  await page.route('https://**/*', async (route) => {
+    await route.abort('blockedbyclient')
+  })
+  const canvas = await openEditor(page)
+  const text = 'Synthetic hello 한글 123 · 한 ㄱㅎ'
+  await page.evaluate(async (text) => {
+    const store = window.openPencil?.getStore?.()
+    if (!store) throw new Error('Editor not initialized')
+    const node = store.graph.createNode('TEXT', store.state.currentPageId, {
+      x: 100,
+      y: 100,
+      width: 650,
+      height: 50,
+      fontSize: 28,
+      text,
+      fontFamily: 'Inter',
+      textAutoResize: 'NONE',
+      fills: [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 }, visible: true, opacity: 1 }]
+    })
+    await store.loadFontsForNodes([node.id])
+    store.setDocumentSource('offline-korean.fig', 'fig')
+    store.requestRender()
+  }, text)
+  await canvas.waitForRender()
+  const download = page.waitForEvent('download')
+  await page.evaluate(async () => {
+    await window.openPencil?.getStore?.().saveFigFile()
+  })
+  const savedPath = await (await download).path()
+  if (!savedPath) throw new Error('Missing synthetic saved FIG')
+  const bytes = await readFile(savedPath)
+  await page.evaluate(async (bytes) => {
+    await window.openPencil?.openDocumentFile?.(
+      new File([new Uint8Array(bytes)], 'offline-korean.fig')
+    )
+    const store = window.openPencil?.getStore?.()
+    if (!store) throw new Error('Reopened editor unavailable')
+    await store.loadFontsForNodes([store.state.currentPageId])
+    store.requestRender()
+  }, Array.from(bytes))
+  await canvas.waitForRender()
+  const result = await page.evaluate(() => {
+    const store = window.openPencil?.getStore?.()
+    if (!store?.renderer) throw new Error('Reopened renderer unavailable')
+    const node = store.graph
+      .getChildren(store.state.currentPageId)
+      .find((node) => node.type === 'TEXT')
+    if (!node) throw new Error('Reopened text missing')
+    return { text: node.text, readiness: store.renderer.nodeFontReadiness(node) }
+  })
+  expect(result).toEqual({ text, readiness: 'ready' })
+  await expectCanvas(canvas, 'offline-korean-mixed-reopened')
 })

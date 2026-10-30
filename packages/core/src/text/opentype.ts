@@ -1,90 +1,23 @@
-import * as OpenTypeSync from 'opentype.js'
-
 import type { FontVariation } from '@open-pencil/scene-graph'
 
-import { fontManager } from './fonts'
+import {
+  parsedFontData,
+  type OutlineFont,
+  type OutlineCommand,
+  type OutlineGlyph,
+  type GlyphOutlineProbe
+} from './font/parsed'
+import { fontManager, type FontManager } from './fonts'
 
-export interface OutlineCommand {
-  type: string
-  x?: number
-  y?: number
-  x1?: number
-  y1?: number
-  x2?: number
-  y2?: number
-}
+export type { OutlineCommand, GlyphOutlineProbe } from './font/parsed'
 
-interface OutlinePath {
-  commands: OutlineCommand[]
-}
-
-interface OutlineGlyph {
-  path: OutlinePath
-  advanceWidth?: number
-  getPath(
-    x: number,
-    y: number,
-    fontSize: number,
-    options?: { variation?: Record<string, number> },
-    font?: OutlineFont
-  ): OutlinePath
-}
-
-interface OutlineFont {
-  unitsPerEm: number
-  ascender: number
-  descender: number
-  tables: {
-    os2?: { sTypoLineGap?: number; yStrikeoutPosition?: number; yStrikeoutSize?: number }
-    post?: { underlinePosition?: number; underlineThickness?: number }
-    fvar?: unknown
-  }
-  glyphs: { get(index: number): OutlineGlyph | undefined }
-  charToGlyphIndex(char: string): number
-  charToGlyph(char: string): OutlineGlyph
-  forEachGlyph(
-    text: string,
-    x: number,
-    y: number,
-    fontSize: number,
-    options: undefined,
-    callback: (glyph: OutlineGlyph, x: number) => void
-  ): number
-}
-
-export interface GlyphOutlineProbe {
-  family: string
-  style: string
-  unitsPerEm: number
-  commandCount: number
-  firstGlyphCommandSample: OutlineCommand[]
-}
-
-interface OpenTypeModule {
-  parse(buffer: ArrayBuffer): OutlineFont
-}
-
-interface ParsedFontCacheEntry {
-  bytes: ArrayBuffer
-  font: OutlineFont | null
-}
-
-const parsedFontCache = new Map<string, ParsedFontCacheEntry>()
-
-function getParsedFont(family: string, style: string): OutlineFont | null {
-  const key = `${family}|${style}`
-  const bytes = fontManager.loadedData(family, style)
-  if (!bytes) return null
-  const cached = parsedFontCache.get(key)
-  if (cached?.bytes === bytes) return cached.font
-  try {
-    const font = (OpenTypeSync as OpenTypeModule).parse(bytes.slice(0))
-    parsedFontCache.set(key, { bytes, font })
-    return font
-  } catch {
-    parsedFontCache.set(key, { bytes, font: null })
-    return null
-  }
+function getParsedFont(
+  family: string,
+  style: string,
+  manager: FontManager = fontManager
+): OutlineFont | null {
+  const bytes = manager.loadedData(family, style)
+  return bytes ? parsedFontData(bytes) : null
 }
 
 /**
@@ -182,11 +115,12 @@ export type FontGlyphCoverage = 'has' | 'missing' | 'unknown'
 export function fontGlyphCoverageSync(
   family: string,
   style: string,
-  char: string
+  char: string,
+  manager: FontManager = fontManager
 ): FontGlyphCoverage {
-  const bytes = fontManager.loadedData(family, style)
+  const bytes = manager.loadedData(family, style)
   if (!bytes) return 'unknown'
-  const font = getParsedFont(family, style)
+  const font = getParsedFont(family, style, manager)
   if (!font) return 'unknown'
   return font.charToGlyphIndex(char) !== 0 ? 'has' : 'missing'
 }
@@ -284,7 +218,8 @@ export async function probeGlyphOutlineCommands(
   const bytes = fontManager.loadedData(family, style)
   if (!bytes) return null
 
-  const font = (OpenTypeSync as OpenTypeModule).parse(bytes.slice(0))
+  const font = parsedFontData(bytes)
+  if (!font) return null
   const glyphs = glyphsForCodePoints(font, text)
   const firstGlyph = glyphs.find((glyph: OutlineGlyph) => glyph.path.commands.length > 0)
   const firstGlyphCommandSample = (firstGlyph?.getPath(0, 0, fontSize).commands ?? []).slice(0, 12)

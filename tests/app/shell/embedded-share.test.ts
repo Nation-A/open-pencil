@@ -25,7 +25,7 @@ describe('embedded share hook', () => {
   })
 
   test('null restores the stock behaviour', () => {
-    setEmbeddedShare({ onShare: () => {} })
+    setEmbeddedShare({ onShare: () => undefined })
     setEmbeddedShare(null)
     expect(embeddedShare.value).toBeNull()
     expect(runEmbeddedShare()).toBe(false)

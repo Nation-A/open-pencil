@@ -1,0 +1,1 @@
+- A host that draws the window's top row can hide the sidebar header (logo, name, settings, panel toggle) and drive settings and the panel toggle through `window.openPencil.setEmbeddedChrome` and `chromeCommand`.

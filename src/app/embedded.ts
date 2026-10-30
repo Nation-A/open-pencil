@@ -70,6 +70,45 @@ export function runEmbeddedShare(): boolean {
   return true
 }
 
+/**
+ * workos: a host that draws the window's top row itself (traffic lights, title, settings, panel toggle) passes
+ * `{ hideHeader: true }`. The sidebar then drops its logo / document name / settings / panel-toggle row and the menubar
+ * sits at the very top. `onLeftPanelChange` gets the left panel's open state once when set and on every change, so the
+ * host can show its toggle pressed. `null` restores the stock header.
+ */
+export interface EmbeddedChrome {
+  hideHeader: boolean
+  onLeftPanelChange?: (open: boolean) => void
+}
+export const embeddedChrome = ref<EmbeddedChrome | null>(null)
+
+export type EmbeddedChromeCommand = 'open-settings' | 'toggle-left-panel'
+
+let lastLeftPanelOpen: boolean | null = null
+
+export function setEmbeddedChrome(value: EmbeddedChrome | null): void {
+  embeddedChrome.value = value
+  if (value?.onLeftPanelChange && lastLeftPanelOpen !== null)
+    value.onLeftPanelChange(lastLeftPanelOpen)
+}
+
+/** The editor reports the left panel's open state here; the host's callback hears every change. */
+export function reportLeftPanelOpen(open: boolean): void {
+  lastLeftPanelOpen = open
+  embeddedChrome.value?.onLeftPanelChange?.(open)
+}
+
+/** Runs what the header's settings gear and panel toggle do; false for an unknown name. */
+export function runEmbeddedChromeCommand(
+  name: string,
+  actions: { openSettings: () => void; toggleLeftPanel: () => void }
+): boolean {
+  if (name === 'open-settings') actions.openSettings()
+  else if (name === 'toggle-left-panel') actions.toggleLeftPanel()
+  else return false
+  return true
+}
+
 /** Entries that come back when `embeddedLocalFiles` is set. */
 export const EMBEDDED_LOCAL_FILE_MENU_IDS: ReadonlySet<string> = new Set(['open', 'save-as'])
 

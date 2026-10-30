@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
 import { collectExportFonts, embeddedFontCSS, registerPDFFonts } from '#core/io/font-embedding'
-import { renderNodesToSVG } from '#core/io/formats/svg'
+import { renderNodesToSVG } from '#core/io/formats/svg/export'
 import { fontManager } from '#core/text/fonts'
 
 const bytes = readFileSync(corePackagePath('assets/Inter-Regular.ttf'))
@@ -53,6 +53,7 @@ describe('portable export fonts', () => {
     const { graph, text } = scene()
     const doc = new jsPDF({ compress: false })
     registerPDFFonts(doc, collectExportFonts(graph, [text.id]))
+    expect(doc.getFont().fontStyle).toBe('normal')
     doc.setFont('Inter', 'normal')
     doc.text('Résumé QA Ω 1030', 20, 20)
     const result = doc.output()

@@ -47,7 +47,7 @@ function nodeFallbackFamilies(node: SceneNode): string[] {
     for (const family of fontManager.getArabicFallbackFamilies()) candidates.add(family)
   }
   return [...candidates].filter((family) =>
-    [...node.text].some((char) => fontGlyphCoverageSync(family, 'Regular', char) === 'has')
+    Array.from(node.text).some((char) => fontGlyphCoverageSync(family, 'Regular', char) === 'has')
   )
 }
 
@@ -57,7 +57,7 @@ export function exportFontFamily(node: SceneNode, primary = node.fontFamily): st
 }
 
 function cssString(value: string): string {
-  const escaped = [...value]
+  const escaped = Array.from(value)
     .map((character) => {
       const code = character.codePointAt(0) ?? 0
       return character === '"' || character === '\\' || code < 32 || code === 127
@@ -73,7 +73,7 @@ export function embeddedFontCSS(faces: ExportFontFace[]): string {
     .map((face) => {
       if (face.data.byteLength < 4) throw new Error('Invalid font data for SVG export')
       const signature = new DataView(face.data).getUint32(0)
-      const formats: Record<number, [string, string]> = {
+      const formats: Partial<Record<number, [string, string]>> = {
         0x00010000: ['truetype', 'ttf'],
         0x4f54544f: ['opentype', 'otf'],
         0x774f4646: ['woff', 'woff'],
@@ -89,6 +89,7 @@ export function embeddedFontCSS(faces: ExportFontFace[]): string {
 
 /** jsPDF embeds static TrueType outlines. Never silently replace an unsupported face. */
 export function registerPDFFonts(doc: jsPDF, faces: ExportFontFace[]): void {
+  const initialFont = doc.getFont()
   for (const [index, face] of faces.entries()) {
     if (
       face.data.byteLength < 12 ||
@@ -109,4 +110,5 @@ export function registerPDFFonts(doc: jsPDF, faces: ExportFontFace[]): void {
       throw new Error(`PDF font embedding failed: ${face.family} (${face.style})`)
     }
   }
+  doc.setFont(initialFont.fontName, initialFont.fontStyle)
 }

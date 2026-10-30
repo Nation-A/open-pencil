@@ -1,7 +1,12 @@
 import type { RenderColorSpace } from '@open-pencil/scene-graph/color'
 import { resolveNodeTextDirection } from '@open-pencil/scene-graph/text-direction'
 
-import { collectExportFonts, embeddedFontCSS, exportFontFamily } from '#core/io/font-embedding'
+import {
+  collectExportFonts,
+  embeddedFontCSS,
+  exportFontFamily,
+  exportFontSegments
+} from '#core/io/font-embedding'
 import { computeContentBounds } from '#core/io/formats/raster'
 
 import {
@@ -243,34 +248,44 @@ function renderTextNode(
   const x = textXForNode(node, direction)
   const y = node.fontSize || 14
 
-  if (node.styleRuns.length > 0) {
-    const spans: SVGNode[] = []
-    let pos = 0
-    for (const run of node.styleRuns.toSorted((a, b) => a.start - b.start)) {
-      const start = Math.max(pos, run.start)
-      if (start > pos) spans.push(svg('tspan', {}, node.text.slice(pos, start)))
-      const end = Math.min(node.text.length, run.start + run.length)
-      if (end <= start) continue
-      spans.push(
-        svg(
-          'tspan',
-          {
-            ...styleOverrideToTspanAttrs(run.style, colorSpace),
-            ...(run.style.fontFamily
-              ? { 'font-family': exportFontFamily(node, run.style.fontFamily) }
-              : {})
-          },
-          node.text.slice(start, end)
-        )
-      )
-      pos = end
+  const spans: SVGNode[] = []
+  const append = (text: string, style: CharacterStyleOverride = {}) => {
+    const primary = style.fontFamily ?? node.fontFamily
+    for (const segment of exportFontSegments(
+      node,
+      text,
+      primary,
+      style.fontWeight ?? node.fontWeight,
+      style.italic ?? node.italic
+    )) {
+      const spanAttrs = styleOverrideToTspanAttrs(style, colorSpace)
+      spanAttrs['font-family'] = segment.family
+      if (segment.fallback) {
+        spanAttrs['font-weight'] = 400
+        spanAttrs['font-style'] = 'normal'
+      }
+      spans.push(svg('tspan', spanAttrs, segment.text))
     }
-    if (pos < node.text.length) spans.push(svg('tspan', {}, node.text.slice(pos)))
-
-    return svg('text', { x, y, ...attrs }, ...spans)
   }
-
-  return svg('text', { x, y, ...attrs }, node.text)
+  let pos = 0
+  for (const run of node.styleRuns.toSorted((a, b) => a.start - b.start)) {
+    const start = Math.max(pos, run.start)
+    if (start > pos) append(node.text.slice(pos, start))
+    const end = Math.min(node.text.length, run.start + run.length)
+    if (end <= start) continue
+    append(node.text.slice(start, end), run.style)
+    pos = end
+  }
+  if (pos < node.text.length) append(node.text.slice(pos))
+  if (
+    node.styleRuns.length === 0 &&
+    spans.length === 1 &&
+    exportFontSegments(node, node.text, node.fontFamily, node.fontWeight, node.italic)[0]
+      ?.family === node.fontFamily
+  ) {
+    return svg('text', { x, y, ...attrs }, node.text)
+  }
+  return svg('text', { x, y, ...attrs }, ...spans)
 }
 
 // --- Main recursive renderer ---

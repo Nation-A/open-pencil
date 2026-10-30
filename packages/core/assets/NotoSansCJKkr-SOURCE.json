@@ -1,10 +1,17 @@
 {
   "sourceRepository": "https://github.com/notofonts/noto-cjk",
   "sourceCommit": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
-  "sourcePath": "Sans/OTF/Korean/NotoSansCJKkr-Regular.otf",
+  "sourcePath": "Sans/Variable/TTF/NotoSansCJKkr-VF.ttf",
+  "sourceBytes": 36140528,
+  "sourceSHA256": "7715af52f5fe77153ce5678546258993982d2da61abea8d25fb89eb5aaec5ca6",
   "license": "OFL-1.1",
-  "bytes": 16433112,
-  "sha256": "6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a",
-  "modifications": "none: complete static original, no subsetting or font transformation",
-  "load": "same-origin on-demand Korean coverage, not startup"
+  "reservedFontName": "Source (not used as the modified font name)",
+  "family": "Noto Sans CJK KR",
+  "bytes": 21655284,
+  "sha256": "970b7a45e3acac4af0872129243880e3c14aba0cea4dec3d7bcc407601ee269d",
+  "modifications": "Full static weight400 instance; all44810 Unicode mappings and65535glyph slots preserved; no subsetting",
+  "buildTool": "fonttools==4.63.0",
+  "buildCommand": "uv run --no-project --with fonttools==4.63.0 python -m fontTools.varLib.instancer NotoSansCJKkr-VF.ttf wght=400 --update-name-table --no-recalc-timestamp --output NotoSansCJKkr-Regular.ttf",
+  "determinism": "Two independent invocations produce identical output SHA-256",
+  "load": "same-origin on-demand Korean coverage, not startup; shared app and PDF/SVG exports"
 }

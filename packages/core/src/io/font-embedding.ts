@@ -1,7 +1,7 @@
 import { fromUint8Array } from 'js-base64'
 import type { jsPDF } from 'jspdf'
 
-import { parseFontStyle } from '@open-pencil/scene-graph'
+import { parseFontStyle, weightToStyle } from '@open-pencil/scene-graph'
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 
 import { textNeedsFallbackScript } from '#core/text/coverage'
@@ -54,6 +54,32 @@ function nodeFallbackFamilies(node: SceneNode): string[] {
 export function exportFontFamily(node: SceneNode, primary = node.fontFamily): string {
   const fallback = nodeFallbackFamilies(node)
   return fallback.length ? [primary, ...fallback].map(cssString).join(', ') : primary
+}
+
+/** SVG viewers select fallback per glyph; svg2pdf needs explicit font runs to do the same. */
+export function exportFontSegments(
+  node: SceneNode,
+  text: string,
+  family: string,
+  weight: number,
+  italic: boolean
+): Array<{ text: string; family: string; fallback: boolean }> {
+  const candidates = nodeFallbackFamilies(node)
+  const style = weightToStyle(weight, italic)
+  const segments: Array<{ text: string; family: string; fallback: boolean }> = []
+  for (const character of text) {
+    let chosen = family
+    if (fontGlyphCoverageSync(family, style, character) === 'missing') {
+      chosen =
+        candidates.find(
+          (candidate) => fontGlyphCoverageSync(candidate, 'Regular', character) === 'has'
+        ) ?? family
+    }
+    const previous = segments.at(-1)
+    if (previous?.family === chosen) previous.text += character
+    else segments.push({ text: character, family: chosen, fallback: chosen !== family })
+  }
+  return segments
 }
 
 function cssString(value: string): string {

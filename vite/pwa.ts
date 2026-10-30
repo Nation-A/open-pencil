@@ -7,6 +7,8 @@ export function openPencilPwaPlugin() {
     workbox: {
       maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
       globPatterns: ['**/*.{js,css,html,wasm,png,svg,ico,ttf,webmanifest}'],
+      // The full Korean fallback stays on demand, like its prior OTF asset.
+      globIgnores: ['**/NotoSansCJKkr-Regular-*.ttf'],
       navigateFallback: '/index.html',
       // OAuth callbacks are standalone pages that relay a redirect, not app routes.
       navigateFallbackDenylist: [/^\/oauth\//]

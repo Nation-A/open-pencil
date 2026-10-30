@@ -78,6 +78,27 @@ describe('portable export fonts', () => {
     expect(embeddedFontCSS([face])).toContain('data:font/otf;')
   })
 
+  test('mixed Korean gets explicit glyph fallback runs for PDF and SVG', async () => {
+    const korean = await Bun.file(corePackagePath('assets/NotoSansCJKkr-Regular.ttf')).arrayBuffer()
+    loaded.mockImplementation((family) => (family === 'Noto Sans CJK KR' ? korean : regular))
+    const fallback = spyOn(fontManager, 'getCJKFallbackFamilies').mockReturnValue([
+      'Noto Sans CJK KR'
+    ])
+    try {
+      const { graph, page, text } = scene()
+      graph.updateNode(text.id, { text: 'Synthetic 한글 123', styleRuns: [] })
+      const result = renderNodesToSVG(graph, page.id, [text.id]) ?? ''
+      expect(result.includes('font-family="Noto Sans CJK KR"')).toBe(true)
+      expect(result.includes('>한글</tspan>')).toBe(true)
+      expect(collectExportFonts(graph, [text.id]).map((face) => face.family)).toEqual([
+        'Inter',
+        'Noto Sans CJK KR'
+      ])
+    } finally {
+      fallback.mockRestore()
+    }
+  })
+
   test('family names cannot escape embedded CSS strings', () => {
     const css = embeddedFontCSS([
       {

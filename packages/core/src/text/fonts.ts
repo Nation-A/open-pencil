@@ -42,7 +42,7 @@ const BUNDLED_FONTS: Record<string, string> = {
   'Inter|SemiBold': '/Inter-SemiBold.ttf',
   'Inter|Bold': '/Inter-Bold.ttf',
   'Inter|ExtraBold': '/Inter-ExtraBold.ttf',
-  'Noto Sans CJK KR|Regular': '/NotoSansCJKkr-Regular.otf',
+  'Noto Sans CJK KR|Regular': '/NotoSansCJKkr-Regular.ttf',
   'Noto Naskh Arabic|Regular': '/NotoNaskhArabic-Regular.ttf'
 }
 

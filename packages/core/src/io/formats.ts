@@ -2,6 +2,7 @@ import { sceneNodeToJSX, selectionToJSX } from '@open-pencil/design-jsx'
 import { parsePenFile } from '@open-pencil/pen'
 
 import { layoutAuthoredNodes } from '#core/layout'
+import { prepareGraphFonts } from '#core/text/prepare'
 
 import { exportFigFile, parseFigFile } from './formats/fig'
 import type { PPTXExportOptions } from './formats/pptx'
@@ -250,6 +251,7 @@ export const svgFormat: IOFormatAdapter<'svg'> = {
   async exportContent(request, options?: SVGExportOptions) {
     const target = resolveExportNodes(request)
     if (!target) throw new Error('Nothing to export')
+    await prepareGraphFonts(request.graph, target.nodeIds)
     const data = renderNodesToSVG(request.graph, target.pageId, target.nodeIds, options)
     if (!data) throw new Error('Nothing to export')
     return {

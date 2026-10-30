@@ -13,7 +13,10 @@ export function pageId(graph: SceneGraph) {
 }
 
 export function exportSVG(graph: SceneGraph, nodeIds: string[], xmlDecl = false): string | null {
-  return renderNodesToSVG(graph, pageId(graph), nodeIds, { xmlDeclaration: xmlDecl })
+  return renderNodesToSVG(graph, pageId(graph), nodeIds, {
+    xmlDeclaration: xmlDecl,
+    embedFonts: false
+  })
 }
 
 export function exportSVGOrThrow(graph: SceneGraph, nodeIds: string[], xmlDecl = false): string {
@@ -26,5 +29,8 @@ export function renderNodesToSVGOrThrow(
   nodeIds: string[],
   options: Parameters<typeof renderNodesToSVG>[3]
 ): string {
-  return expectDefined(renderNodesToSVG(graph, pageId, nodeIds, options), 'SVG output')
+  return expectDefined(
+    renderNodesToSVG(graph, pageId, nodeIds, { ...options, embedFonts: false }),
+    'SVG output'
+  )
 }

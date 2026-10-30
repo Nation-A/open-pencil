@@ -210,7 +210,9 @@ export function createExternalAssetChannel(options: {
     const packet = result.output
     if (packet.type === 'base') {
       if (packet.epoch !== current.epoch || packet.revision < current.revision) return
+      const changed = packet.revision !== current.revision
       current = { revision: packet.revision, epoch: packet.epoch }
+      if (changed) for (const requestId of receivers.keys()) requestNext(requestId)
       return
     }
     if (packet.revision !== current.revision || packet.epoch !== current.epoch) return

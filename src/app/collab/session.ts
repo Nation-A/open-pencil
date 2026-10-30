@@ -186,11 +186,16 @@ export function openRoomSession({
   meta.observe(refreshDocument)
   awareness.on('change', updatePeers)
 
+  const initialSyncComplete = ref(false)
+  const readyWaiters = new Set<(error: Error) => void>()
   const connection = connectCollabRoom({
     roomId,
     ydoc,
     awareness,
     updatePeersList: updatePeers,
+    onInitialSync: () => {
+      initialSyncComplete.value = true
+    },
     joinRoom
   })
   if (externalMode) {
@@ -241,6 +246,39 @@ export function openRoomSession({
     syncLocalEdit: sync.syncLocalEdit
   })
 
+  async function ensureReadyAssets() {
+    if (!externalMode) return
+    if (disposed) throw new Error('collab_room_closed')
+    if (!initialSyncComplete.value || !hasDocument.value)
+      await new Promise<void>((resolve, reject) => {
+        const stop = watch([initialSyncComplete, hasDocument], ([synced, present]) => {
+          if (synced && present) {
+            cleanup()
+            resolve()
+          }
+        })
+        const fail = (error: Error) => {
+          cleanup()
+          reject(error)
+        }
+        const timer = setTimeout(() => fail(new Error('collab_initial_sync_unavailable')), 30000)
+        function cleanup() {
+          stop()
+          clearTimeout(timer)
+          readyWaiters.delete(fail)
+        }
+        readyWaiters.add(fail)
+      })
+    for (;;) {
+      if (disposed) throw new Error('collab_room_closed')
+      const before = Y.encodeStateVector(ydoc)
+      await assets?.ensureAvailable()
+      const after = Y.encodeStateVector(ydoc)
+      if (before.length === after.length && before.every((byte, index) => byte === after[index]))
+        return
+    }
+  }
+
   return {
     roomId,
     store,
@@ -255,7 +293,7 @@ export function openRoomSession({
     updateSelection(ids) {
       awareness.setLocalStateField('selection', ids)
     },
-    ensureAssetsAvailable: () => assets?.ensureAvailable() ?? Promise.resolve(),
+    ensureAssetsAvailable: ensureReadyAssets,
     shareDocument() {
       sync.syncAllNodesToYjs()
       variableSync.share()
@@ -268,6 +306,7 @@ export function openRoomSession({
       unbindGraphEvents()
       variableSync.dispose()
       disposed = true
+      for (const fail of readyWaiters) fail(new Error('collab_room_closed'))
       assets?.dispose()
       connectionTimer.pause()
       stopNameWatch()

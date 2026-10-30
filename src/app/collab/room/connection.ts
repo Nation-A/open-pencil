@@ -12,6 +12,7 @@ export type CollabRoomOptions = {
   ydoc: Y.Doc
   awareness: awarenessProtocol.Awareness
   updatePeersList: () => void
+  onInitialSync?: () => void
   joinRoom?: JoinCollabRoom
   /** The most a peer's update may decode to; `MAX_COLLAB_MESSAGE_BYTES` unless a test lowers it. */
   maxMessageBytes?: number
@@ -116,6 +117,7 @@ export function connectCollabRoom({
   ydoc,
   awareness,
   updatePeersList,
+  onInitialSync,
   joinRoom = joinCollabRoom,
   maxMessageBytes = MAX_COLLAB_MESSAGE_BYTES
 }: CollabRoomOptions): CollabRoomConnection {
@@ -150,7 +152,8 @@ export function connectCollabRoom({
   })
 
   getSyncReply((data, peerId) => {
-    applyRemote(ydoc, data, { limit: maxMessageBytes, peerId, compressed: true })
+    if (applyRemote(ydoc, data, { limit: maxMessageBytes, peerId, compressed: true }))
+      onInitialSync?.()
   })
 
   ydoc.on('updateV2', (update: Uint8Array, origin: unknown) => {

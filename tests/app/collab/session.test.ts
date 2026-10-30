@@ -53,6 +53,59 @@ function firstPageId(store: EditorStore) {
 }
 
 describe('room sessions', () => {
+  test('an injected joiner waits for initial sync before an empty graph can be exported', async () => {
+    const rooms = createMemoryRooms(),
+      delayed: (() => void)[] = []
+    let joins = 0
+    setCollabTransportOverride((roomId) => {
+      const room = rooms.join(roomId),
+        guest = ++joins === 2
+      return {
+        ...room,
+        assetProtocol: 2,
+        assetBase: { revision: 1, epoch: 1 },
+        makeAction(namespace) {
+          const [send, receive] = room.makeAction(namespace)
+          return [
+            send,
+            (handler) =>
+              receive((data, peerId) => {
+                if (guest && namespace === 'sync-reply') delayed.push(() => handler(data, peerId))
+                else handler(data, peerId)
+              })
+          ]
+        }
+      }
+    })
+    const hostStore = newStore(),
+      guestStore = newStore()
+    hostStore.graph.createNode('RECTANGLE', firstPageId(hostStore), { id: 'ready:1' })
+    const host = openRoomSession({ roomId: ROOM_A, store: hostStore, origin: 'shared' })
+    host.shareDocument()
+    const guest = openRoomSession({ roomId: ROOM_A, store: guestStore, origin: 'joined' })
+    let ready = false
+    const waiting = guest.ensureAssetsAvailable().then(() => {
+      ready = true
+      return undefined
+    })
+    try {
+      await rooms.settle()
+      expect(ready).toBe(false)
+      expect(guest.hasDocument.value).toBe(false)
+      for (const deliver of delayed) deliver()
+      await rooms.settle()
+      await waiting
+      expect(ready).toBe(true)
+      expect(getNodeOrThrow(guestStore.graph, 'ready:1').type).toBe('RECTANGLE')
+    } finally {
+      host.dispose()
+      guest.dispose()
+      hostStore.preparationController.dispose()
+      guestStore.preparationController.dispose()
+      setCollabTransportOverride(null)
+    }
+  })
+
   test('an injected joiner emits no CRDT writes before its host link is ready', async () => {
     const frames: string[] = []
     const transport: CollabRoomTransport = {

@@ -7,7 +7,6 @@ import {
   type CommentThread
 } from '@open-pencil/scene-graph'
 
-
 function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
   return {
     id,
@@ -63,8 +62,14 @@ describe('comments list', () => {
       }),
       thread('theirs', { pageId: '0:2', author: 'Claude' })
     ]
-    expect(ids(listCommentThreads(threads, { ...base, onlyPage: true }))).toEqual(['mine', 'replied'])
-    expect(ids(listCommentThreads(threads, { ...base, onlyMine: true }))).toEqual(['mine', 'replied'])
+    expect(ids(listCommentThreads(threads, { ...base, onlyPage: true }))).toEqual([
+      'mine',
+      'replied'
+    ])
+    expect(ids(listCommentThreads(threads, { ...base, onlyMine: true }))).toEqual([
+      'mine',
+      'replied'
+    ])
   })
 
   test('sorts by when each thread was started', () => {
@@ -90,5 +95,48 @@ describe('comments list', () => {
       ['second', 2],
       ['third', 3]
     ])
+  })
+
+  test('filters by status, by mentions of a person, and sorts by page order', () => {
+    const threads = [
+      thread('open', { createdAt: '2026-10-08T10:00:00.000Z', authorId: 'u1', pageId: 'p2' }),
+      thread('done', {
+        createdAt: '2026-10-08T11:00:00.000Z',
+        resolved: true,
+        mentions: ['u9'],
+        pageId: 'p1'
+      }),
+      thread('reply', {
+        createdAt: '2026-10-08T12:00:00.000Z',
+        pageId: 'p1',
+        replies: [
+          {
+            id: 'r',
+            author: 'Bea',
+            authorId: 'u2',
+            mentions: ['u9'],
+            text: 'x',
+            createdAt: '2026-10-08T12:30:00.000Z'
+          }
+        ]
+      })
+    ]
+    const all = { ...base, showResolved: true }
+    expect(ids(listCommentThreads(threads, { ...all, status: 'resolved' }))).toEqual(['done'])
+    expect(
+      ids(listCommentThreads(threads, { ...base, showResolved: true, status: 'unresolved' }))
+    ).toEqual(['reply', 'open'])
+    // "resolved only" wins over hiding resolved ones.
+    expect(ids(listCommentThreads(threads, { ...base, status: 'resolved' }))).toEqual(['done'])
+    expect(ids(listCommentThreads(threads, { ...all, mentionsId: 'u9' }))).toEqual([
+      'reply',
+      'done'
+    ])
+    expect(ids(listCommentThreads(threads, { ...all, onlyMine: true, authorId: 'u2' }))).toEqual([
+      'reply'
+    ])
+    expect(
+      ids(listCommentThreads(threads, { ...all, sort: 'page', pageOrder: ['p1', 'p2'] }))
+    ).toEqual(['done', 'reply', 'open'])
   })
 })

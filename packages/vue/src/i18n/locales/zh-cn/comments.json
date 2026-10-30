@@ -25,5 +25,13 @@
   "noMatches": "没有匹配的评论。",
   "replyCount": "回复：{count}",
   "commentDeleted": "评论已删除",
-  "hideComments": "隐藏评论"
+  "hideComments": "隐藏评论",
+  "edit": "编辑",
+  "editReply": "编辑回复",
+  "editComment": "编辑评论",
+  "statusAll": "全部评论",
+  "statusUnresolved": "仅未解决",
+  "statusResolved": "仅已解决",
+  "onlyMentions": "提到我的",
+  "pageOrder": "按页面顺序"
 }

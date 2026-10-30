@@ -4,8 +4,10 @@ import { opacityFromBuffer } from '@open-pencil/core/editor'
 import type { useEditorCommands, useViewportKind } from '@open-pencil/vue'
 
 import type { PropertiesTab } from '@/app/ai/chat/use'
+import { commentsHost } from '@/app/comments/host-provider'
 import { useComments } from '@/app/comments/use'
 import type { EditorStore } from '@/app/editor/active-store'
+import { allowedTools } from '@/app/embedded-comments'
 
 type KeyboardActionsOptions = {
   store: EditorStore
@@ -94,7 +96,8 @@ export function createKeyboardActions({
     }
     if (useComments().closeCard()) return
     store.clearSelection()
-    store.setTool('SELECT')
+    // workos: a read-only document has no Select tool; Escape leaves Comment for Hand.
+    store.setTool(allowedTools(commentsHost.value)?.has('SELECT') === false ? 'HAND' : 'SELECT')
   }
 
   function toggleAutoLayout() {

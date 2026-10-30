@@ -1,8 +1,7 @@
 import { createEventHook, createGlobalState } from '@vueuse/core'
-import { computed, ref, watch, watchEffect, type WritableComputedRef } from 'vue'
+import { computed, ref } from 'vue'
 
 import {
-  commentAnchor,
   commentTimestamp as now,
   createCommentReply,
   createCommentThread,
@@ -12,32 +11,25 @@ import {
   resolveCommentThread,
   type CommentThread
 } from '@open-pencil/scene-graph'
-import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import { useCollabIdentity } from '@/app/collab/identity'
 import { useActiveEditorStoreRef } from '@/app/editor/active-store'
 import type { PagePoint } from '@/app/editor/pages/point'
-import { allowedTools, fallbackTool, importLegacyComments } from '@/app/embedded-comments'
+import { bindHostRules } from '@/app/embedded-comments'
 import { setCommentsOnCanvas } from '@/app/settings/preferences/apply'
-import {
-  appPreferences,
-  updateCommentPreferences,
-  type CommentPreferences
-} from '@/app/settings/preferences/store'
+import { appPreferences } from '@/app/settings/preferences/store'
 
 import { followDocumentComments } from './document'
+import { createCommentEditing, type CommentEditing } from './edit-state'
 import { createHostActions } from './host-actions'
-import { commentsHost, hostThreads, setCommentFocusHandler } from './host-provider'
-
-/** A comment preference the list and menus read and change in place. */
-function preference<K extends keyof CommentPreferences>(
-  key: K
-): WritableComputedRef<CommentPreferences[K]> {
-  return computed({
-    get: () => appPreferences.value.comments[key],
-    set: (value) => updateCommentPreferences({ [key]: value })
-  })
-}
+import {
+  applyPinMoves,
+  commentsHost,
+  hostThreads,
+  pendingPinMoves,
+  setCommentFocusHandler
+} from './host-provider'
+import { createListState } from './list-state'
 
 /**
  * The active document's comments and the comment UI's state, one for the whole app: the canvas
@@ -55,12 +47,10 @@ export const useComments = createGlobalState(() => {
   const draft = ref<PagePoint | null>(null)
   /** Deleting asks first; the confirmation dialog listens for which thread. */
   const deleteRequested = createEventHook<string>()
-  const listQuery = ref('')
   const showOnCanvas = computed(() => appPreferences.value.comments.showOnCanvas)
-  const listShowResolved = preference('showResolved')
-  const listOnlyPage = preference('onlyPage')
-  const listOnlyMine = preference('onlyMine')
-  const listSort = preference('sort')
+  const list = createListState()
+  const { listShowResolved } = list
+  const editing = ref<CommentEditing>(null)
 
   // Another document is open: nothing from the last one stays open or half-written.
   const documentComments = followDocumentComments(
@@ -68,6 +58,7 @@ export const useComments = createGlobalState(() => {
     () => {
       activeThreadId.value = null
       draft.value = null
+      editing.value = null
     },
     () => !commentsHost.value
   )
@@ -77,26 +68,25 @@ export const useComments = createGlobalState(() => {
   const host = commentsHost
   const hosted = computed(() => host.value !== null)
   const threads = computed<CommentThread[]>(() =>
-    host.value ? hostThreads.value : documentComments.threads.value
+    host.value
+      ? applyPinMoves(hostThreads.value, pendingPinMoves.value)
+      : documentComments.threads.value
   )
   const remote = createHostActions({ threads, activeThreadId })
   const authorName = computed(() => host.value?.me.name ?? identity.name.value)
-
-  // workos: a commenter keeps the Comment tool only, and the document's old comments move to the host once.
-  watchEffect(() => {
-    const store = storeRef.value
-    const allowed = allowedTools(host.value)
-    if (store && allowed && !allowed.has(store.state.activeTool)) {
-      store.setTool(fallbackTool(allowed))
-    }
+  const editor = createCommentEditing({
+    editing,
+    threads,
+    authorName,
+    remote,
+    update,
+    store: () => documentComments.store(),
+    draft,
+    activeThreadId,
+    focusThread: (threadId) => focusThread(threadId)
   })
-  watch(
-    [storeRef, host],
-    ([store, current]) => {
-      if (store && current) void importLegacyComments(current, store.graph)
-    },
-    { immediate: true }
-  )
+
+  bindHostRules(storeRef)
 
   function me() {
     return { name: authorName.value, color: identity.color }
@@ -108,6 +98,7 @@ export const useComments = createGlobalState(() => {
   }
 
   function toggleThread(threadId: string) {
+    editing.value = null
     draft.value = null
     activeThreadId.value = activeThreadId.value === threadId ? null : threadId
   }
@@ -115,6 +106,7 @@ export const useComments = createGlobalState(() => {
   /** Close an unsent comment or an open thread; false when neither was open. */
   function closeCard(): boolean {
     const open = draft.value !== null || activeThreadId.value !== null
+    editing.value = null
     draft.value = null
     activeThreadId.value = null
     return open
@@ -140,14 +132,6 @@ export const useComments = createGlobalState(() => {
     draft.value = null
     activeThreadId.value = thread.id
     mutate((current) => [...current, thread])
-  }
-
-  /** A dragged pin lands on whatever is under it now, as in Figma. */
-  function movePin(threadId: string, at: Vector) {
-    const store = documentComments.store()
-    // workos: a host-stored pin stays where it was placed.
-    if (!store || host.value) return
-    update(threadId, (thread) => ({ ...thread, ...commentAnchor(store.graph, thread.pageId, at) }))
   }
 
   function reply(threadId: string, text: string) {
@@ -211,20 +195,21 @@ export const useComments = createGlobalState(() => {
     can: remote.can,
     members: remote.members,
     meId: remote.meId,
-    edit: remote.edit,
+    editing,
+    canEdit: editor.canEdit,
+    canMovePin: editor.canMovePin,
+    startEdit: editor.startEdit,
+    cancelEdit: editor.cancelEdit,
+    saveEdit: editor.saveEdit,
     react: remote.react,
     showOnCanvas,
-    listQuery,
-    listShowResolved,
-    listOnlyPage,
-    listOnlyMine,
-    listSort,
+    ...list,
     pinPosition,
     startDraft,
     toggleThread,
     closeCard,
     addThread,
-    movePin,
+    movePin: editor.movePin,
     reply,
     setResolved,
     requestDelete,

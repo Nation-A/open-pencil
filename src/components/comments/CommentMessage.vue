@@ -15,6 +15,7 @@ import CommentTime from './CommentTime.vue'
 const {
   author,
   color,
+  picture = undefined,
   at,
   text,
   reactions = undefined,
@@ -23,6 +24,7 @@ const {
 } = defineProps<{
   author: string
   color?: Color
+  picture?: string
   at: string
   text: string
   /** workos: set (even empty) when a host stores the comment, which shows the reaction row. */
@@ -41,7 +43,7 @@ const ui = comments()
 
 <template>
   <article data-slot="comment-message" :class="ui.message()">
-    <PersonAvatar :name="who.name(author)" :color="who.color(color)" />
+    <PersonAvatar :name="who.name(author)" :color="who.color(color)" :picture="picture" />
     <div :class="ui.messageMeta()">
       <span :class="ui.messageAuthor()">{{ who.name(author) }}</span>
       <CommentTime :at="at" :class="ui.messageTime()" />

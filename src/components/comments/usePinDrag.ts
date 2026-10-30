@@ -22,6 +22,8 @@ export function usePinDrag(options: {
   zoom: () => number
   onDrop: (threadId: string, at: Vector) => void
   onClick: (threadId: string) => void
+  /** workos: whether this pin may be dragged; one that may not still opens on a click. */
+  canDrag?: (threadId: string) => boolean
 }) {
   const drag = ref<PinDrag | null>(null)
   // The click that ends a drag only drops the pin; browsers differ on whether it comes at all.
@@ -29,6 +31,7 @@ export function usePinDrag(options: {
 
   function start(event: PointerEvent, threadId: string, origin: Vector) {
     if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return
+    if (options.canDrag && !options.canDrag(threadId)) return
     event.currentTarget.setPointerCapture(event.pointerId)
     dropped = false
     drag.value = {

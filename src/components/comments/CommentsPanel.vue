@@ -41,6 +41,7 @@ const menuCls = useMenuUI({ content: 'min-w-52' })
 const itemCls = menuItem({ justify: 'start', class: 'relative pl-7' })
 const ui = commentsTheme()
 const { listQuery, listShowResolved, listOnlyPage, listSort, listOnlyMine } = comments
+const { listStatus, listOnlyMentions } = comments
 
 const numbers = computed(() => commentThreadNumbers(comments.threads.value))
 const listed = computed(() =>
@@ -51,12 +52,21 @@ const listed = computed(() =>
     pageId: store.state.currentPageId,
     onlyMine: listOnlyMine.value,
     author: comments.author.value,
-    sort: listSort.value
+    sort: listSort.value,
+    authorId: comments.meId.value,
+    status: listStatus.value,
+    mentionsId: listOnlyMentions.value ? comments.meId.value : null,
+    pageOrder: store.graph.getPages().map((page) => page.id)
   })
 )
 
 const filtered = computed(
-  () => listQuery.value.trim() !== '' || listOnlyMine.value || listOnlyPage.value
+  () =>
+    listQuery.value.trim() !== '' ||
+    listOnlyMine.value ||
+    listOnlyPage.value ||
+    listStatus.value !== 'all' ||
+    listOnlyMentions.value
 )
 
 function pageName(pageId: string, fallback?: string) {
@@ -64,7 +74,11 @@ function pageName(pageId: string, fallback?: string) {
 }
 
 function setSort(value: unknown) {
-  if (value === 'newest' || value === 'oldest') listSort.value = value
+  if (value === 'newest' || value === 'oldest' || value === 'page') listSort.value = value
+}
+
+function setStatus(value: unknown) {
+  if (value === 'all' || value === 'unresolved' || value === 'resolved') listStatus.value = value
 }
 </script>
 
@@ -97,6 +111,45 @@ function setSort(value: unknown) {
                     </DropdownMenuItemIndicator>
                     {{ messages.oldestFirst }}
                   </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="page"
+                    :class="itemCls"
+                    data-command="comments-sort-page"
+                  >
+                    <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                      <icon-lucide-check class="size-3.5" />
+                    </DropdownMenuItemIndicator>
+                    {{ messages.pageOrder }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator :class="menuCls.separator" />
+                <DropdownMenuRadioGroup :model-value="listStatus" @update:model-value="setStatus">
+                  <DropdownMenuRadioItem value="all" :class="itemCls">
+                    <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                      <icon-lucide-check class="size-3.5" />
+                    </DropdownMenuItemIndicator>
+                    {{ messages.statusAll }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="unresolved"
+                    :class="itemCls"
+                    data-command="comments-status-unresolved"
+                  >
+                    <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                      <icon-lucide-check class="size-3.5" />
+                    </DropdownMenuItemIndicator>
+                    {{ messages.statusUnresolved }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="resolved"
+                    :class="itemCls"
+                    data-command="comments-status-resolved"
+                  >
+                    <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                      <icon-lucide-check class="size-3.5" />
+                    </DropdownMenuItemIndicator>
+                    {{ messages.statusResolved }}
+                  </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator :class="menuCls.separator" />
                 <DropdownMenuCheckboxItem v-model="listShowResolved" :class="itemCls">
@@ -110,6 +163,17 @@ function setSort(value: unknown) {
                     <icon-lucide-check class="size-3.5" />
                   </DropdownMenuItemIndicator>
                   {{ messages.onlyMine }}
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  v-if="comments.meId.value"
+                  v-model="listOnlyMentions"
+                  :class="itemCls"
+                  data-command="comments-only-mentions"
+                >
+                  <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                    <icon-lucide-check class="size-3.5" />
+                  </DropdownMenuItemIndicator>
+                  {{ messages.onlyMentions }}
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem v-model="listOnlyPage" :class="itemCls">
                   <DropdownMenuItemIndicator :class="ui.menuIndicator()">

@@ -1,5 +1,6 @@
 import { useEventListener } from '@vueuse/core'
 
+import { documentLocked } from '@/app/comments/read-only'
 import type { EditorStore } from '@/app/editor/active-store'
 import { isEditing } from '@/app/shell/keyboard/focus'
 import { isReservedModShortcut } from '@/app/shell/keyboard/reserved'
@@ -16,6 +17,7 @@ export function bindNudgeKeys(store: EditorStore) {
     if (isEditing(e) || store.state.editingTextId) return
     if (isReservedModShortcut(e)) e.preventDefault()
     if (e.metaKey || e.ctrlKey || e.altKey) return
+    if (documentLocked.value) return
 
     const delta = NUDGE_DELTAS[e.code]
     if (!delta || store.state.selectedIds.size === 0) return

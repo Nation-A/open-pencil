@@ -25,6 +25,8 @@ export interface PresencePersonRow {
   name: string
   color: Color
   agents: PresenceAgentRow[]
+  /** workos: a host's picture of the person. */
+  avatarUrl?: string
   /** Present while the person is in the voice call. */
   voice?: PresenceVoice
 }

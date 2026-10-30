@@ -204,7 +204,6 @@ export function openRoomSession({
       base,
       render: () => store.requestRender()
     })
-    meta.set('workosAssetFormat', 2)
   }
   broadcastIdentity()
 

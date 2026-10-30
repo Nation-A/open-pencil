@@ -1,6 +1,12 @@
 import type { RenderColorSpace } from '@open-pencil/scene-graph/color'
 import { resolveNodeTextDirection } from '@open-pencil/scene-graph/text-direction'
 
+import {
+  collectExportFonts,
+  embeddedFontCSS,
+  exportFontFamily,
+  exportFontSegments
+} from '#core/io/font-embedding'
 import { computeContentBounds } from '#core/io/formats/raster'
 
 import {
@@ -180,7 +186,7 @@ function styleOverrideToTspanAttrs(
   if (style.fontFamily) attrs['font-family'] = style.fontFamily
   if (style.fontSize) attrs['font-size'] = style.fontSize
   if (style.fontWeight) attrs['font-weight'] = style.fontWeight
-  if (style.italic) attrs['font-style'] = 'italic'
+  if (style.italic !== undefined) attrs['font-style'] = style.italic ? 'italic' : 'normal'
   if (style.letterSpacing) attrs['letter-spacing'] = round(style.letterSpacing)
   if (style.textDecoration === 'UNDERLINE') attrs['text-decoration'] = 'underline'
   if (style.textDecoration === 'STRIKETHROUGH') attrs['text-decoration'] = 'line-through'
@@ -228,7 +234,7 @@ function renderTextNode(
   else if (node.textDecoration === 'STRIKETHROUGH') textDecoration = 'line-through'
 
   const attrs: Record<string, string | number | undefined> = {
-    'font-family': node.fontFamily || undefined,
+    'font-family': exportFontFamily(node) || undefined,
     'font-size': node.fontSize || undefined,
     'font-weight': node.fontWeight !== 400 ? node.fontWeight : undefined,
     'font-style': node.italic ? 'italic' : undefined,
@@ -242,19 +248,44 @@ function renderTextNode(
   const x = textXForNode(node, direction)
   const y = node.fontSize || 14
 
-  if (node.styleRuns.length > 0) {
-    const spans: SVGNode[] = []
-    let pos = 0
-    for (const run of node.styleRuns) {
-      const text = node.text.slice(pos, pos + run.length)
-      pos += run.length
-      spans.push(svg('tspan', styleOverrideToTspanAttrs(run.style, colorSpace), text))
+  const spans: SVGNode[] = []
+  const append = (text: string, style: CharacterStyleOverride = {}) => {
+    const primary = style.fontFamily ?? node.fontFamily
+    for (const segment of exportFontSegments(
+      node,
+      text,
+      primary,
+      style.fontWeight ?? node.fontWeight,
+      style.italic ?? node.italic
+    )) {
+      const spanAttrs = styleOverrideToTspanAttrs(style, colorSpace)
+      spanAttrs['font-family'] = segment.family
+      if (segment.fallback) {
+        spanAttrs['font-weight'] = 400
+        spanAttrs['font-style'] = 'normal'
+      }
+      spans.push(svg('tspan', spanAttrs, segment.text))
     }
-
-    return svg('text', { x, y, ...attrs }, ...spans)
   }
-
-  return svg('text', { x, y, ...attrs }, node.text)
+  let pos = 0
+  for (const run of node.styleRuns.toSorted((a, b) => a.start - b.start)) {
+    const start = Math.max(pos, run.start)
+    if (start > pos) append(node.text.slice(pos, start))
+    const end = Math.min(node.text.length, run.start + run.length)
+    if (end <= start) continue
+    append(node.text.slice(start, end), run.style)
+    pos = end
+  }
+  if (pos < node.text.length) append(node.text.slice(pos))
+  if (
+    node.styleRuns.length === 0 &&
+    spans.length === 1 &&
+    exportFontSegments(node, node.text, node.fontFamily, node.fontWeight, node.italic)[0]
+      ?.family === node.fontFamily
+  ) {
+    return svg('text', { x, y, ...attrs }, node.text)
+  }
+  return svg('text', { x, y, ...attrs }, ...spans)
 }
 
 // --- Main recursive renderer ---
@@ -458,6 +489,8 @@ function isGroupLike(node: SceneNode): boolean {
 export interface SVGExportOptions {
   /** Include XML declaration (default: true) */
   xmlDeclaration?: boolean
+  /** Embed loaded document fonts for standalone viewing (default: true). */
+  embedFonts?: boolean
   /** Target export color space (default: srgb) */
   colorSpace?: 'srgb' | 'display-p3'
 }
@@ -502,6 +535,10 @@ export function renderNodesToSVG(
   if (contentNodes.length === 0) return null
 
   const rootChildren: (SVGNode | string)[] = []
+  if (options.embedFonts !== false) {
+    const css = embeddedFontCSS(collectExportFonts(graph, nodeIds))
+    if (css) ctx.defs.push(svg('style', { type: 'text/css' }, css))
+  }
   if (ctx.defs.length > 0) {
     rootChildren.push(svg('defs', {}, ...ctx.defs))
   }

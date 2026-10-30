@@ -1,7 +1,11 @@
 import type { SceneGraph } from '@open-pencil/scene-graph'
 
+import { collectExportFonts, registerPDFFonts } from '#core/io/font-embedding'
 import { computeContentBounds } from '#core/io/formats/raster'
 import { renderNodesToSVG } from '#core/io/formats/svg'
+import { prepareGraphFonts } from '#core/text/prepare'
+
+import { assertCanonicalClusterStyles, withCanonicalPDFText } from './canonical-text'
 
 export interface PDFExportOptions {
   title?: string
@@ -13,7 +17,10 @@ export async function renderNodesToPDF(
   nodeIds: string[],
   options: PDFExportOptions = {}
 ): Promise<Uint8Array | null> {
-  const svg = renderNodesToSVG(graph, pageId, nodeIds, { xmlDeclaration: false })
+  assertCanonicalClusterStyles(graph, nodeIds)
+  await prepareGraphFonts(graph, nodeIds)
+  const fonts = collectExportFonts(graph, nodeIds)
+  const svg = renderNodesToSVG(graph, pageId, nodeIds, { xmlDeclaration: false, embedFonts: false })
   if (!svg) return null
 
   const bounds = computeContentBounds(graph, nodeIds)
@@ -32,6 +39,8 @@ export async function renderNodesToPDF(
     compress: true
   })
 
+  registerPDFFonts(doc, fonts)
+
   if (options.title) {
     doc.setProperties({ title: options.title })
   }
@@ -43,7 +52,7 @@ export async function renderNodesToPDF(
   const parseError = svgDoc.querySelector('parsererror')
   if (parseError) return null
 
-  await svg2pdf(svgElement, doc, { x: 0, y: 0, width, height })
+  await withCanonicalPDFText(doc, () => svg2pdf(svgElement, doc, { x: 0, y: 0, width, height }))
 
   const buffer = doc.output('arraybuffer')
   return new Uint8Array(buffer)

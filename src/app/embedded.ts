@@ -26,6 +26,30 @@ export function setEmbeddedLocalFiles(value: EmbeddedLocalFiles | null): void {
   embeddedLocalFiles.value = value
 }
 
+/**
+ * workos: a host that owns sharing (its own dialog, its own ACL) passes `{ onShare }`. The Share button then renders no peer-to-peer
+ * popover (name, "Share this file", join a room) and a click only calls `onShare()`. `label` replaces the button text, `canShare()`
+ * returning false disables it. `null` restores the stock popover.
+ */
+export interface EmbeddedShare {
+  onShare: () => void
+  label?: string
+  canShare?: () => boolean
+}
+export const embeddedShare = ref<EmbeddedShare | null>(null)
+
+export function setEmbeddedShare(value: EmbeddedShare | null): void {
+  embeddedShare.value = value
+}
+
+/** Runs the host's share handler; false when none is set or it reports it cannot share right now. */
+export function runEmbeddedShare(): boolean {
+  const host = embeddedShare.value
+  if (!host || host.canShare?.() === false) return false
+  host.onShare()
+  return true
+}
+
 /** Entries that come back when `embeddedLocalFiles` is set. */
 export const EMBEDDED_LOCAL_FILE_MENU_IDS: ReadonlySet<string> = new Set(['open', 'save-as'])
 

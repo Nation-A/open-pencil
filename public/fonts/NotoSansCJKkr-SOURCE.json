@@ -1,0 +1,10 @@
+{
+  "sourceRepository": "https://github.com/notofonts/noto-cjk",
+  "sourceCommit": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
+  "sourcePath": "Sans/OTF/Korean/NotoSansCJKkr-Regular.otf",
+  "license": "OFL-1.1",
+  "bytes": 16433112,
+  "sha256": "6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a",
+  "modifications": "none: complete static original, no subsetting or font transformation",
+  "load": "same-origin on-demand Korean coverage, not startup"
+}

@@ -23,7 +23,12 @@ import {
 import { createDerivedGlyphPathCache } from '#core/canvas/text/derived'
 import { transformTextCase } from '#core/text/case'
 import { fontManager } from '#core/text/fonts'
-import { fontFaceDemand, fontResolver, missingGlyphCharacters } from '#core/text/resolver'
+import {
+  fontCoverageDemand,
+  fontFaceDemand,
+  fontResolver,
+  missingGlyphCharacters
+} from '#core/text/resolver'
 
 import { expectDefined } from '#tests/helpers/assert'
 import { repoPath } from '#tests/helpers/paths'
@@ -371,6 +376,39 @@ describe('paragraph font weights', () => {
 })
 
 describe('renderText headless visual', () => {
+  test('keeps drawable Latin text visible after Hangul fallback is exhausted', async () => {
+    const ck = await initCanvasKit()
+    const fontProvider = ck.TypefaceFontProvider.Make()
+    fontManager.attachProvider(ck, fontProvider)
+    fontManager.markLoaded(
+      'Inter',
+      'Regular',
+      await Bun.file('packages/core/assets/Inter-Regular.ttf').arrayBuffer()
+    )
+    const families = fontManager.getCJKFallbackFamilies(),
+      previous = [...families]
+    families.length = 0
+    const demand = fontCoverageDemand('cjk-kr', ['한', '글'])
+    fontResolver.exhaust(demand)
+    const surface = expectDefined(ck.MakeSurface(300, 50), 'surface')
+    try {
+      const renderer = new SkiaRendererClass(ck, surface)
+      renderer.fontsLoaded = true
+      renderer.fontProvider = fontProvider
+      const node = textNode({
+        text: 'Synthetic hello 한글 123',
+        fontFamily: 'Inter',
+        fontWeight: 400
+      })
+      expect(nodeFontReadiness(renderer, node)).toBe('substituted')
+      expect(isNodeFontLoaded(renderer, node)).toBe(true)
+    } finally {
+      fontResolver.reset(demand)
+      families.splice(0, families.length, ...previous)
+      surface.delete()
+    }
+  })
+
   test('detects base direction for Arabic and mixed text', () => {
     expect(detectTextDirection('مرحبا')).toBe('RTL')
     expect(resolveTextDirection('AUTO', 'مرحبا world')).toBe('RTL')

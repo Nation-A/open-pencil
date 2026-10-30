@@ -12,6 +12,7 @@ import { useEditorCommands, useI18n } from '@open-pencil/vue'
 import { DEFAULT_COLLAB_STATE, useCollabInjected } from '@/app/collab/use'
 import { useActiveEditorStoreRef, useEditorStore } from '@/app/editor/active-store'
 import { toolIcons } from '@/app/editor/icons'
+import { embeddedShare, runEmbeddedShare } from '@/app/embedded'
 import { useNotificationMessages } from '@/app/i18n/notifications'
 import { presenceOf, renameAgent as renameLocalAgent } from '@/app/presence/registry'
 import type { FollowTarget } from '@/app/presence/types'
@@ -85,6 +86,10 @@ function createMobileHudContext() {
 
   /** Copies the room's link; a tab not in a room is shared first, never a room it opened. */
   function share() {
+    if (embeddedShare.value) {
+      runEmbeddedShare()
+      return
+    }
     if (!collab) return
     const roomId = collabState.value.roomId ?? collab.shareCurrentDoc()
     if (!roomId) return

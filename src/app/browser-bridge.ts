@@ -4,7 +4,13 @@ import type { CollabReturn } from '@/app/collab/context'
 import type { RoomStatus } from '@/app/collab/room/status'
 import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
 import type { EditorStore } from '@/app/editor/session/create'
-import { setEmbedded, setEmbeddedLocalFiles, type EmbeddedLocalFiles } from '@/app/embedded'
+import {
+  setEmbedded,
+  setEmbeddedLocalFiles,
+  setEmbeddedShare,
+  type EmbeddedLocalFiles,
+  type EmbeddedShare
+} from '@/app/embedded'
 import { createNavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import type { NavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import { appRuntimeConfig } from '@/app/runtime/config'
@@ -50,6 +56,8 @@ export interface OpenPencilWindowAPI {
   setEmbedded?: (embedded: boolean) => void
   /** workos: brings Open and Save As back in embedded mode; Open calls `open()` instead of opening a tab. */
   setEmbeddedLocalFiles?: (handlers: EmbeddedLocalFiles | null) => void
+  /** workos: hands the Share button to the host. Set: no peer-to-peer popover, a click calls `onShare()`. Null restores it. */
+  setEmbeddedShare?: (share: EmbeddedShare | null) => void
   /** workos: replaces Trystero for every room joined afterwards. Pass null to restore it. */
   setCollabTransport?: (join: JoinCollabRoom | null) => void
   collabHost?: OpenPencilCollabHost
@@ -67,6 +75,7 @@ function windowAPI(): OpenPencilWindowAPI {
   window.openPencil ??= {}
   window.openPencil.setEmbedded ??= setEmbedded
   window.openPencil.setEmbeddedLocalFiles ??= setEmbeddedLocalFiles
+  window.openPencil.setEmbeddedShare ??= setEmbeddedShare
   window.openPencil.getStore ??= () => {
     if (!activeStore) throw new Error('OpenPencil store not initialized')
     return activeStore

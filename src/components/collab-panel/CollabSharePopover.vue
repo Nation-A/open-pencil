@@ -3,6 +3,7 @@ import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka
 import { computed } from 'vue'
 
 import { showsRoomDocument } from '@/app/collab/room/status'
+import { embeddedShare, runEmbeddedShare } from '@/app/embedded'
 import ConnectedRoom from '@/components/collab-panel/ConnectedRoom.vue'
 import { useCollabPanelContext } from '@/components/collab-panel/context'
 import ShareOrJoinRoom from '@/components/collab-panel/ShareOrJoinRoom.vue'
@@ -19,7 +20,18 @@ const connection = computed(() => {
 </script>
 
 <template>
-  <PopoverRoot v-model:open="collab.popoverOpen">
+  <button
+    v-if="embeddedShare"
+    data-test-id="collab-share-button"
+    data-connection="host"
+    :disabled="embeddedShare.canShare?.() === false"
+    :class="[shareButton({ connection: 'idle' }), 'disabled:cursor-default disabled:opacity-50']"
+    @click="runEmbeddedShare()"
+  >
+    <icon-lucide-share-2 class="size-3.5" />
+    {{ embeddedShare.label ?? collab.messages.share }}
+  </button>
+  <PopoverRoot v-else v-model:open="collab.popoverOpen">
     <PopoverTrigger as-child>
       <button
         data-test-id="collab-share-button"

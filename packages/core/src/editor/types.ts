@@ -93,6 +93,11 @@ export interface EditorSharedState {
    * name or CSS name, bump only `sceneVersion`, so the canvas keeps its recorded pictures.
    */
   canvasVersion: number
+  /**
+   * The document cannot be changed from this editor (a viewer or a commenter of a shared file). Editor
+   * actions that change the document do nothing while it is set, and menus and panels show them disabled.
+   */
+  readOnly?: boolean
 }
 
 export interface PencilState {

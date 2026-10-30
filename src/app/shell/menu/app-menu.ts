@@ -23,6 +23,12 @@ import { shortcutPlatform, useEditorCommands, useI18n } from '@open-pencil/vue'
 import { openTour } from '@/app/demo/document'
 import { useEditorStore } from '@/app/editor/active-store'
 import { openVariablesDialog } from '@/app/editor/tokens/dialog'
+import {
+  embedded,
+  embeddedLocalFiles,
+  EMBEDDED_HIDDEN_MENU_IDS,
+  EMBEDDED_LOCAL_FILE_MENU_IDS
+} from '@/app/embedded'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import {
   setCommentsOnCanvas,
@@ -39,12 +45,6 @@ import type {
   AppMenuGroupSchema,
   AppMenuIcon
 } from '@/app/shell/menu/schema'
-import {
-  embedded,
-  embeddedLocalFiles,
-  EMBEDDED_HIDDEN_MENU_IDS,
-  EMBEDDED_LOCAL_FILE_MENU_IDS
-} from '@/app/embedded'
 import { APP_MENU_SCHEMA } from '@/app/shell/menu/schema'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { openFileDialog } from '@/app/shell/menu/use'
@@ -95,6 +95,19 @@ function isVisible(entry: { target?: string; id?: string }): boolean {
 
 function isSeparator(entry: AppMenuEntry): entry is Extract<AppMenuEntry, { type: 'separator' }> {
   return entry.type === 'separator'
+}
+
+/** Menu items that change the document, which a read-only document shows disabled. */
+const READ_ONLY_DISABLED_MENU_IDS: ReadonlySet<string> = new Set([
+  'cut',
+  'paste',
+  'paste-to-replace',
+  'selection.rename',
+  'insert-icon'
+])
+
+function isDocumentEditingMenuItem(id: string): boolean {
+  return READ_ONLY_DISABLED_MENU_IDS.has(id) || id.startsWith('text.') || id.startsWith('arrange.')
 }
 
 export function useAppMenu() {
@@ -283,6 +296,7 @@ export function useAppMenu() {
   }
 
   function disabled(item: AppMenuActionItem): boolean | undefined {
+    if (store.state.readOnly && isDocumentEditingMenuItem(item.id)) return true
     switch (item.id) {
       case 'view-split-right':
       case 'view-split-down':

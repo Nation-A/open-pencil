@@ -42,6 +42,9 @@ const canvasMenuActions = createCanvasMenuActions(store, selectedIds)
 const { execCommand } = canvasMenuActions
 const contextMenu = useCanvasContextMenu(canvasMenu, hasSelection, editor, canvasMenuActions, t)
 
+/** The document is read-only: the items that change it are disabled. */
+const readOnly = computed(() => store.state.readOnly === true)
+
 const selectedGuide = computed(() => store.state.guides.selected)
 
 function removeSelectedGuide() {
@@ -76,7 +79,12 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
   <ContextMenuContent :class="cls.menu" :side-offset="2" align="start" @close-auto-focus.prevent>
     <MenuScrollArea>
       <template v-if="selectedGuide">
-        <ContextMenuItem data-property="guide" :class="cls.item" @select="removeSelectedGuide">
+        <ContextMenuItem
+          data-property="guide"
+          :class="cls.item"
+          :disabled="readOnly"
+          @select="removeSelectedGuide"
+        >
           <span>{{ t.removeGuide }}</span>
         </ContextMenuItem>
       </template>
@@ -93,7 +101,7 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
         <ContextMenuItem
           data-test-id="context-cut"
           :class="cls.item"
-          :disabled="!hasSelection"
+          :disabled="!hasSelection || readOnly"
           @select="execCommand('cut')"
         >
           <span>{{ t.cut }}</span
@@ -102,6 +110,7 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
         <ContextMenuItem
           data-test-id="context-paste"
           :class="cls.item"
+          :disabled="readOnly"
           @select="execCommand('paste')"
         >
           <span>{{ t.pasteHere }}</span
@@ -110,7 +119,7 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
         <ContextMenuItem
           data-test-id="context-paste-to-replace"
           :class="cls.item"
-          :disabled="!hasSelection"
+          :disabled="!hasSelection || readOnly"
           @select="canvasMenuActions.pasteToReplace"
         >
           <span>{{ t.pasteToReplace }}</span>
@@ -118,7 +127,7 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
         <ContextMenuItem
           data-test-id="context-duplicate"
           :class="cls.item"
-          :disabled="!hasSelection"
+          :disabled="!hasSelection || readOnly"
           @select="getCommand('selection.duplicate').run()"
         >
           <span>{{ getCommand('selection.duplicate').label }}</span
@@ -129,7 +138,7 @@ function contextCommandTestId(id: EditorCommandId | undefined): string | undefin
         <ContextMenuItem
           data-test-id="context-delete"
           :class="cls.item"
-          :disabled="!hasSelection"
+          :disabled="!hasSelection || readOnly"
           @select="getCommand('selection.delete').run()"
         >
           <span>{{ getCommand('selection.delete').label }}</span

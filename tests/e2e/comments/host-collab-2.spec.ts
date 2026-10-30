@@ -169,7 +169,7 @@ test('a pin can be edited, moved and shows avatars; both editors follow the host
   await ada.keyboard.press('Escape')
   await livePins(ada).click()
   await expect(ada.locator('[data-slot="comment-thread"]')).toBeVisible()
-  await expect(ada.locator('[data-command="comment-edit-reply"]')).toHaveCount(0)
+  await expect(ada.locator('[data-command="comment-reply-menu"]')).toHaveCount(0)
   await ada.getByRole('button', { name: 'More actions' }).click()
   // The menu overlaps the card's text while it opens, so pick the item with the keyboard.
   await ada.locator('[data-command="comment-edit"]').focus()
@@ -187,8 +187,8 @@ test('a pin can be edited, moved and shows avatars; both editors follow the host
   await bea.locator('[data-slot="comment-pin"]:not([data-draft])').click()
   await expect(bea.locator('[data-slot="comment-message"]').first()).toContainText('second draft')
   // Bea may edit her own reply but not Ada's comment; her broken avatar shows initials.
-  await expect(bea.locator('[data-command="comment-edit-reply"]')).toHaveCount(1)
-  await bea.getByRole('button', { name: 'More actions' }).click()
+  await expect(bea.locator('[data-command="comment-reply-menu"]')).toHaveCount(1)
+  await bea.getByRole('button', { name: 'More actions' }).first().click()
   await expect(bea.locator('[data-command="comment-edit"]')).toHaveCount(0)
   await bea.keyboard.press('Escape')
 

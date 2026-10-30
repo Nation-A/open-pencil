@@ -44,7 +44,7 @@ export function useMenuModel() {
   const canvasMenu = computed<MenuEntry[]>(() =>
     buildCanvasContextMenu({
       commandMenuItem,
-      otherPages: otherPages.value,
+      otherPages: editor.state.readOnly ? [] : otherPages.value,
       moveSelectionToPage,
       selection,
       t: t.value

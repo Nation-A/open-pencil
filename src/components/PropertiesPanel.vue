@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
 
 import { useDesignCheckMessages, useI18n } from '@open-pencil/vue'
 
@@ -22,6 +22,11 @@ const checkMessages = useDesignCheckMessages()
 const store = useEditorStore()
 
 const tabStyles = propertiesTabs()
+/** A read-only document has no AI tab: asking the AI to change the design would change the document. */
+const readOnly = computed(() => store.state.readOnly === true)
+watchEffect(() => {
+  if (readOnly.value && activeTab.value === 'ai') activeTab.value = 'design'
+})
 /** The Comment tool turns the sidebar into the comments list, as in Figma; the tabs keep their state. */
 const commenting = computed(() => store.state.activeTool === 'COMMENT')
 
@@ -54,7 +59,12 @@ const problemCount = computed(() => {
           <icon-lucide-code :class="tabStyles.icon()" aria-hidden="true" />
           <span :class="tabStyles.label()">{{ panels.code }}</span>
         </TabsTrigger>
-        <TabsTrigger value="ai" data-test-id="properties-tab-ai" :class="tabStyles.trigger()">
+        <TabsTrigger
+          v-if="!readOnly"
+          value="ai"
+          data-test-id="properties-tab-ai"
+          :class="tabStyles.trigger()"
+        >
           <icon-lucide-sparkles :class="tabStyles.icon()" aria-hidden="true" />
           <span :class="tabStyles.label()">{{ panels.ai }}</span>
         </TabsTrigger>
@@ -107,6 +117,7 @@ const problemCount = computed(() => {
       </TabsContent>
 
       <TabsContent
+        v-if="!readOnly"
         value="ai"
         class="flex min-h-0 flex-1 flex-col"
         :force-mount="true"

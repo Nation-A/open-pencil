@@ -37,7 +37,7 @@ export function useEditorCommands() {
   )
 
   function moveSelectionToPage(pageId: string) {
-    if (!capabilities.canMoveToPage.value) return
+    if (!capabilities.canMoveToPage.value || editor.state.readOnly) return
     editor.moveToPage(pageId)
   }
 

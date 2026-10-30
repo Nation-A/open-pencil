@@ -56,7 +56,7 @@ export function useLayerDrag(
       const cleanup = combine(
         draggable({
           element,
-          canDrag: () => acceptsSiblings,
+          canDrag: () => acceptsSiblings && editor.state.readOnly !== true,
           getInitialData: () => ({ id: data.id }),
           onDragStart: () => {
             draggingId.value = data.id

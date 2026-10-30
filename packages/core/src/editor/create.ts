@@ -43,6 +43,7 @@ import { createDesignIssueActions } from './issues'
 import { createNodeActions } from './nodes'
 import { createPageActions } from './pages'
 import { createPlayActions } from './play/actions'
+import { guardReadOnly } from './read-only'
 import { createSelectionActions } from './selection'
 import { createShaderActions } from './shaders/actions'
 import { createShaderFrames } from './shaders/frames'
@@ -69,7 +70,10 @@ export { createDefaultEditorState } from './state'
 export function createEditor(options?: EditorOptions) {
   let _graph = options?.graph ?? new SceneGraph()
   const skipInitialGraphSetup = options?.skipInitialGraphSetup ?? false
-  const undo = new UndoManager({ onChange: () => emitEditorEvent('history:changed') })
+  const undo = new UndoManager({
+    onChange: () => emitEditorEvent('history:changed'),
+    canWrite: () => state.readOnly !== true
+  })
   const _loadFont = options?.loadFont ?? fontManager.loadFont.bind(fontManager)
   const _getViewportSize =
     options?.getViewportSize ??
@@ -365,119 +369,122 @@ export function createEditor(options?: EditorOptions) {
     releaseOriginalFigArchive(_graph)
   }
 
-  return {
-    get graph() {
-      return _graph
+  return guardReadOnly(
+    {
+      get graph() {
+        return _graph
+      },
+      get renderer() {
+        return _renderer
+      },
+      get canvasRenderers() {
+        return [..._renderers]
+      },
+      get textEditor() {
+        return _textEditor
+      },
+      undo,
+      state,
+
+      // Graph reads
+      runLayoutForNode,
+      runMutationWithLayout,
+      ...graphReads,
+
+      // Lifecycle
+      beginInteractiveEdit,
+      isInteractiveEditing: () => interactiveEdits.size > 0,
+      requestRender,
+      requestRefresh,
+      textSelectionChanged,
+      requestRepaint,
+      onEditorEvent,
+      setCanvasKit,
+      setNavigationPhase,
+      removeCanvasRenderer,
+      replaceGraph,
+      subscribeToGraph,
+      dispose,
+      releaseGraphResources,
+
+      // Selection
+      ...selection,
+
+      // Pages
+      ...pages,
+
+      // Canvas and frame guides
+      ...guides,
+      ...designIssues,
+
+      // Shapes & tools
+      ...shapes,
+
+      // Structure (group, reorder, reparent, z-order)
+      ...structure,
+
+      // Nodes (update, layout); while text is edited, character styles go to its selection
+      ...nodes,
+      updateNode: (id: string, changes: Partial<SceneNode>) =>
+        textSelectionStyle.updateNode(id, changes, nodes.updateNode),
+      updateNodeWithUndo: (id: string, changes: Partial<SceneNode>, label = 'Update') =>
+        textSelectionStyle.updateNodeWithUndo(id, changes, (target, next) =>
+          nodes.updateNodeWithUndo(target, next, label)
+        ),
+      getTextSelectionStyle: textSelectionStyle.selectionStyle,
+
+      // Alignment (align, flip, rotate)
+      ...alignment,
+
+      // Preview: instances with a behaviour respond to the pointer on this canvas
+      ...preview,
+
+      // Bitmap-to-vector replacement
+      ...vectorize,
+      ...icons,
+      ...shaders,
+      ...shaderFrames,
+
+      // Variables
+      ...variables,
+      ...designTokens,
+
+      // Text editing
+      ...text,
+
+      // Viewport
+      ...viewport,
+      ...frameNavigation,
+
+      // Undo — bridge functions that need cross-module refs
+      ...undoBridge,
+      commitNodeUpdate: (id: string, previous: Partial<SceneNode>, label = 'Update') =>
+        textSelectionStyle.commitNodeUpdate(
+          id,
+          previous,
+          (target, values) => undoBridge.commitNodeUpdate(target, values, label),
+          (target, next) => nodes.updateNodeWithUndo(target, next, label)
+        ),
+      // While text is edited, what was typed undoes first and the editor keeps the result.
+      undoAction: () => text.runTextEditStep(undoBridge.undoAction),
+      redoAction: () => text.runTextEditStep(undoBridge.redoAction),
+
+      setDocumentColorSpace: colorSpace.setDocumentColorSpace,
+
+      // Clipboard — bridge functions that need selectedNodes
+      ...clipboardBridge,
+
+      // Components — bridge functions
+      ...componentBridge,
+
+      // Structure — bridge functions that need selectedNodes
+      ...structureBridge,
+
+      // Lint fixes, which touch nodes, structure and deletion in one undo step
+      ...lintFixBridge
     },
-    get renderer() {
-      return _renderer
-    },
-    get canvasRenderers() {
-      return [..._renderers]
-    },
-    get textEditor() {
-      return _textEditor
-    },
-    undo,
-    state,
-
-    // Graph reads
-    runLayoutForNode,
-    runMutationWithLayout,
-    ...graphReads,
-
-    // Lifecycle
-    beginInteractiveEdit,
-    isInteractiveEditing: () => interactiveEdits.size > 0,
-    requestRender,
-    requestRefresh,
-    textSelectionChanged,
-    requestRepaint,
-    onEditorEvent,
-    setCanvasKit,
-    setNavigationPhase,
-    removeCanvasRenderer,
-    replaceGraph,
-    subscribeToGraph,
-    dispose,
-    releaseGraphResources,
-
-    // Selection
-    ...selection,
-
-    // Pages
-    ...pages,
-
-    // Canvas and frame guides
-    ...guides,
-    ...designIssues,
-
-    // Shapes & tools
-    ...shapes,
-
-    // Structure (group, reorder, reparent, z-order)
-    ...structure,
-
-    // Nodes (update, layout); while text is edited, character styles go to its selection
-    ...nodes,
-    updateNode: (id: string, changes: Partial<SceneNode>) =>
-      textSelectionStyle.updateNode(id, changes, nodes.updateNode),
-    updateNodeWithUndo: (id: string, changes: Partial<SceneNode>, label = 'Update') =>
-      textSelectionStyle.updateNodeWithUndo(id, changes, (target, next) =>
-        nodes.updateNodeWithUndo(target, next, label)
-      ),
-    getTextSelectionStyle: textSelectionStyle.selectionStyle,
-
-    // Alignment (align, flip, rotate)
-    ...alignment,
-
-    // Preview: instances with a behaviour respond to the pointer on this canvas
-    ...preview,
-
-    // Bitmap-to-vector replacement
-    ...vectorize,
-    ...icons,
-    ...shaders,
-    ...shaderFrames,
-
-    // Variables
-    ...variables,
-    ...designTokens,
-
-    // Text editing
-    ...text,
-
-    // Viewport
-    ...viewport,
-    ...frameNavigation,
-
-    // Undo — bridge functions that need cross-module refs
-    ...undoBridge,
-    commitNodeUpdate: (id: string, previous: Partial<SceneNode>, label = 'Update') =>
-      textSelectionStyle.commitNodeUpdate(
-        id,
-        previous,
-        (target, values) => undoBridge.commitNodeUpdate(target, values, label),
-        (target, next) => nodes.updateNodeWithUndo(target, next, label)
-      ),
-    // While text is edited, what was typed undoes first and the editor keeps the result.
-    undoAction: () => text.runTextEditStep(undoBridge.undoAction),
-    redoAction: () => text.runTextEditStep(undoBridge.redoAction),
-
-    setDocumentColorSpace: colorSpace.setDocumentColorSpace,
-
-    // Clipboard — bridge functions that need selectedNodes
-    ...clipboardBridge,
-
-    // Components — bridge functions
-    ...componentBridge,
-
-    // Structure — bridge functions that need selectedNodes
-    ...structureBridge,
-
-    // Lint fixes, which touch nodes, structure and deletion in one undo step
-    ...lintFixBridge
-  }
+    () => state.readOnly === true
+  )
 }
 
 export type Editor = ReturnType<typeof createEditor>

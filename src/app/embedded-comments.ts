@@ -9,6 +9,7 @@ import {
 } from '@open-pencil/scene-graph'
 
 import { commentsHost, type CommentsHost } from '@/app/comments/host-provider'
+import { documentLocked } from '@/app/comments/read-only'
 import type { EditorStore } from '@/app/editor/active-store'
 
 /**
@@ -74,6 +75,12 @@ export async function importLegacyComments(
 
 /** A commenter keeps the Comment tool only, and the document's old comments move to the host once. */
 export function bindHostRules(storeRef: Ref<EditorStore | undefined>): void {
+  // The one signal every guard reads: the editor's own actions, its history, the menus and the panels.
+  watchEffect(() => {
+    const store = storeRef.value
+    if (store && store.state.readOnly !== documentLocked.value)
+      store.state.readOnly = documentLocked.value
+  })
   watchEffect(() => {
     const store = storeRef.value
     const allowed = allowedTools(commentsHost.value)

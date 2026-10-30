@@ -79,7 +79,7 @@ const styles = computed(() =>
         : undefined
     "
     :class="styles.row({ class: ui?.row })"
-    @dblclick="emit('renameStart', node.id, node.name)"
+    @dblclick="!store.state.readOnly && emit('renameStart', node.id, node.name)"
   >
     <LayerTreeDisclosure
       :expanded="expanded"

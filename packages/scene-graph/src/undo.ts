@@ -9,6 +9,8 @@ export interface UndoManagerOptions {
   limit?: number
   /** Called after recording, undoing, redoing, or clearing committed history. */
   onChange?: () => void
+  /** False while the document cannot be changed: executing, recording, undoing and redoing do nothing. */
+  canWrite?: () => boolean
 }
 
 interface UndoBatch {
@@ -27,10 +29,12 @@ export class UndoManager {
   private readonly settlers = new Set<() => void>()
   private readonly limit: number
   private readonly onChange: (() => void) | undefined
+  private readonly canWrite: () => boolean
 
   constructor(options: UndoManagerOptions = {}) {
     this.limit = options.limit ?? DEFAULT_HISTORY_LIMIT
     this.onChange = options.onChange
+    this.canWrite = options.canWrite ?? (() => true)
   }
 
   apply(entry: UndoEntry): void {
@@ -38,11 +42,13 @@ export class UndoManager {
   }
 
   execute(entry: UndoEntry): void {
+    if (!this.canWrite()) return
     entry.forward()
     this.record(entry)
   }
 
   push(entry: UndoEntry): void {
+    if (!this.canWrite()) return
     this.record(entry)
   }
 
@@ -61,6 +67,7 @@ export class UndoManager {
    * changes they hold so far.
    */
   pushStep(entry: UndoEntry): void {
+    if (!this.canWrite()) return
     this.settle()
     this.pushUndoEntry(entry)
   }
@@ -79,6 +86,7 @@ export class UndoManager {
   }
 
   undo(): string | null {
+    if (!this.canWrite()) return null
     this.settle()
     const entry = this.undoStack.pop()
     if (!entry) return null
@@ -89,6 +97,7 @@ export class UndoManager {
   }
 
   redo(): string | null {
+    if (!this.canWrite()) return null
     this.settle()
     const entry = this.redoStack.pop()
     if (!entry) return null

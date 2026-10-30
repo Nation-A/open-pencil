@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuPortal,
   DropdownMenuRoot,
   DropdownMenuTrigger
@@ -35,7 +36,7 @@ defineSlots<{ menu?(): unknown }>()
 
 const messages = useCommentMessages()
 const common = useCommonMessages()
-const menuCls = useMenuUI({ content: 'min-w-40' })
+const menuCls = useMenuUI({ content: 'min-w-40', item: 'justify-start gap-2' })
 const ui = comments()
 const state = useComments()
 // workos: host-stored comments carry reactions (possibly none); the stock ones do not.
@@ -138,21 +139,35 @@ defineExpose({ focus: () => composer.value?.focus() })
           :can-react="state.can.value.react"
           @react="state.react(thread.id, entry.id, $event)"
         >
-          <template #actions>
-            <IconButton
-              v-if="state.canEdit(thread, entry.id)"
-              :label="messages.editReply"
-              data-command="comment-edit-reply"
-              @click="state.startEdit(thread.id, entry.id)"
-            >
-              <icon-lucide-pencil class="size-3" />
-            </IconButton>
-            <IconButton
-              :label="messages.deleteReply"
-              @click="emit('deleteReply', thread.id, entry.id)"
-            >
-              <icon-lucide-trash-2 class="size-3" />
-            </IconButton>
+          <template v-if="state.canEdit(thread, entry.id)" #actions>
+            <!-- A reply's own menu, shown on hover as in Figma: edit and delete, for the author only. -->
+            <DropdownMenuRoot :modal="false">
+              <DropdownMenuTrigger as-child>
+                <IconButton :label="messages.moreActions" data-command="comment-reply-menu">
+                  <icon-lucide-ellipsis class="size-3" />
+                </IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuContent :class="menuCls.content" align="end" :side-offset="4">
+                  <DropdownMenuItem
+                    :class="menuCls.item"
+                    data-command="comment-edit-reply"
+                    @select="state.startEdit(thread.id, entry.id)"
+                  >
+                    <icon-lucide-pencil :class="menuCls.icon" />
+                    <span>{{ messages.edit }}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    :class="menuCls.item"
+                    data-command="comment-delete-reply"
+                    @select="emit('deleteReply', thread.id, entry.id)"
+                  >
+                    <icon-lucide-trash-2 :class="menuCls.icon" />
+                    <span>{{ messages.deleteReply }}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenuPortal>
+            </DropdownMenuRoot>
           </template>
         </CommentMessage>
       </template>

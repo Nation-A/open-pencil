@@ -2,6 +2,8 @@
 import { useI18n } from '@open-pencil/vue'
 import type { LayerNode } from '@open-pencil/vue'
 
+import { useEditorStore } from '@/app/editor/active-store'
+
 import Tip from '../ui/overlay/Tip.vue'
 
 const { node, ui } = defineProps<{
@@ -15,6 +17,7 @@ const emit = defineEmits<{
 }>()
 
 const { menu: t } = useI18n()
+const store = useEditorStore()
 </script>
 
 <template>
@@ -26,6 +29,7 @@ const { menu: t } = useI18n()
     <Tip :label="node.locked ? t.unlock : t.lock">
       <button
         type="button"
+        :disabled="store.state.readOnly"
         data-slot="action"
         :aria-label="node.locked ? t.unlock : t.lock"
         :class="ui.action"
@@ -39,6 +43,7 @@ const { menu: t } = useI18n()
     <Tip :label="node.visible ? t.hide : t.show">
       <button
         type="button"
+        :disabled="store.state.readOnly"
         data-slot="action"
         :aria-label="node.visible ? t.hide : t.show"
         :class="ui.action"

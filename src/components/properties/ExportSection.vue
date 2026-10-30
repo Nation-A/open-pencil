@@ -32,6 +32,17 @@ const {
   clampExportScale
 } = useExport()
 
+/**
+ * A read-only document cannot gain export settings, but it can still be exported: the stored settings,
+ * or one 1x PNG when there are none, which the controls show without letting them change.
+ */
+const readOnly = computed(() => editorStore.state.readOnly === true)
+const shownSettings = computed(() =>
+  readOnly.value && activeSettings.value.length === 0
+    ? [{ format: 'png' as const, scale: 1 }]
+    : activeSettings.value
+)
+
 const previewBlob = shallowRef<Blob | null>(null)
 const previewURL = useObjectUrl(previewBlob)
 const showPreview = ref(false)
@@ -66,7 +77,7 @@ async function doExport() {
         activeTarget.value === 'page'
           ? ({ scope: 'page', pageId: id } as const)
           : ({ scope: 'node', nodeId: id } as const)
-      for (const setting of activeSettings.value) {
+      for (const setting of shownSettings.value) {
         requests.push({ target, formatId: setting.format, options: { scale: setting.scale } })
       }
     }
@@ -119,9 +130,9 @@ watch(previewKey, updatePreview, { flush: 'post' })
 </script>
 
 <template>
-  <PanelSection :label="panels.export" :empty="activeSettings.length === 0">
+  <PanelSection :label="panels.export" :empty="shownSettings.length === 0">
     <template #actions>
-      <IconButton :label="panels.addExport" @click="addSetting">
+      <IconButton v-if="!readOnly" :label="panels.addExport" @click="addSetting">
         <icon-lucide-plus class="size-3.5" />
       </IconButton>
     </template>
@@ -130,9 +141,10 @@ watch(previewKey, updatePreview, { flush: 'post' })
     </p>
 
     <PanelItemRow
-      v-for="(setting, index) in activeSettings"
+      v-for="(setting, index) in shownSettings"
       :key="`${targetIds.join(',')}:${index}`"
       data-property="exportSettings"
+      :inert="readOnly"
       :data-index="index"
     >
       <div v-if="formatSupportsScale(setting.format)" class="w-24 shrink-0">
@@ -156,6 +168,7 @@ watch(previewKey, updatePreview, { flush: 'post' })
       <template #rail="{ removeClass }">
         <IconButton
           :label="panels.removeExport"
+          v-if="!readOnly"
           :class="[removeClass, 'shrink-0']"
           @click="removeSetting(index)"
         >
@@ -165,7 +178,7 @@ watch(previewKey, updatePreview, { flush: 'post' })
     </PanelItemRow>
 
     <AppButton
-      v-if="activeSettings.length > 0"
+      v-if="shownSettings.length > 0"
       color="primary"
       variant="solid"
       data-test-id="export-button"
@@ -176,7 +189,7 @@ watch(previewKey, updatePreview, { flush: 'post' })
       <span class="truncate">{{ panels.export }} {{ activeName }}</span>
     </AppButton>
 
-    <Tip v-if="activeSettings.length > 0" :label="panels.toggleExportPreview">
+    <Tip v-if="shownSettings.length > 0" :label="panels.toggleExportPreview">
       <button
         data-test-id="export-preview-toggle"
         class="mt-1 flex w-full cursor-pointer items-center gap-1 rounded border-none bg-transparent px-0 py-1 text-[11px] text-muted hover:text-surface"

@@ -59,7 +59,9 @@ const currentPages = ref<readonly PageItem[]>([])
 const currentMovePage = ref<PageActions['move'] | null>(null)
 const pageReorder = useFlatReorderDrag<PageItem>({
   items: () => currentPages.value,
-  onMove: (pageId, index) => currentMovePage.value?.(pageId, index)
+  onMove: (pageId, index) => {
+    if (!readOnly.value) currentMovePage.value?.(pageId, index)
+  }
 })
 
 function setPageActions(renamePage: (pageId: string, name: string) => void) {
@@ -70,7 +72,11 @@ watch(pageInput, (input) => {
   if (input) void rename.focusInput(input)
 })
 
+/** A read-only document keeps its page list as it is: no add, rename, delete or reorder. */
+const readOnly = computed(() => storeRef.value?.state.readOnly === true)
+
 function startRename(pg: PageItem, renamePage: (pageId: string, name: string) => void) {
+  if (readOnly.value) return
   setPageActions(renamePage)
   rename.start(pg.id, pg.name)
 }
@@ -107,7 +113,12 @@ function setupPageRowRef(
     <div data-test-id="pages-panel" :class="baseStyles.panel()">
       <div :class="baseStyles.header()">
         <span data-test-id="pages-header" :class="baseStyles.title()">{{ panels.pages }}</span>
-        <IconButton :label="panels.addPage" data-test-id="pages-add" @click="actions.add()">
+        <IconButton
+          v-if="!readOnly"
+          :label="panels.addPage"
+          data-test-id="pages-add"
+          @click="actions.add()"
+        >
           <icon-lucide-plus class="size-3.5" />
         </IconButton>
       </div>
@@ -180,6 +191,7 @@ function setupPageRowRef(
                   <ContextMenuItem
                     data-test-id="pages-context-rename"
                     :class="menuCls.item"
+                    :disabled="readOnly"
                     @select="startRename(pg, actions.rename)"
                   >
                     <icon-lucide-pencil :class="menuCls.icon" />
@@ -188,7 +200,7 @@ function setupPageRowRef(
                   <ContextMenuItem
                     data-test-id="pages-context-delete"
                     :class="menuCls.item"
-                    :disabled="pages.length <= 1"
+                    :disabled="readOnly || pages.length <= 1"
                     @select="actions.delete(pg.id)"
                   >
                     <icon-lucide-trash-2 :class="menuCls.icon" />

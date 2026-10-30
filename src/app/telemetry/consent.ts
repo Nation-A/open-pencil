@@ -4,6 +4,7 @@ import type { ConsentSource } from '@open-pencil/feedback/contract'
 import { randomHex } from '@open-pencil/scene-graph/random'
 import { locale } from '@open-pencil/vue'
 
+import { hostOwnsOnboarding } from '@/app/embedded'
 import { appPreferences, updateSharingPreferences } from '@/app/settings/preferences/store'
 
 import { FEEDBACK_ENABLED } from './config'
@@ -42,7 +43,7 @@ export function setUsageStatsConsent(granted: boolean, source: ConsentSource): v
 
 /** Opens the question unless this build or environment sends nothing, or it was answered. */
 export function offerUsageStatsPrompt(source: Exclude<ConsentSource, 'settings'>): void {
-  if (!askable.value || usageStatsConsent.value !== 'unset') return
+  if (hostOwnsOnboarding() || !askable.value || usageStatsConsent.value !== 'unset') return
   usageStatsPrompt.value = source
 }
 

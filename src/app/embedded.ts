@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 
+import { IS_BROWSER } from '@/constants'
+
 /**
  * workos: a host page that owns the document (one design per editor frame, saved through its own
  * bridge) switches this on with `window.openPencil.setEmbedded(true)`. The editor then hides what
@@ -10,6 +12,24 @@ export const embedded = ref(false)
 
 export function setEmbedded(value: boolean): void {
   embedded.value = value
+}
+
+/**
+ * workos: true when this editor runs inside another page. The host calls `setEmbedded(true)` only after the editor booted, but
+ * first-run surfaces (the welcome, the usage-stats question) are decided during boot, so they ask this instead of `embedded`.
+ */
+export function isHostFramed(): boolean {
+  if (!IS_BROWSER) return false
+  try {
+    return window.self !== window.top
+  } catch {
+    return true // a cross-origin top that throws on access is a host page
+  }
+}
+
+/** workos: whether the editor's own onboarding (welcome, tour, "Set up AI", usage stats) is out of place: a host owns the session. */
+export function hostOwnsOnboarding(): boolean {
+  return embedded.value || isHostFramed()
 }
 
 /**

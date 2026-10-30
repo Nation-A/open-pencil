@@ -75,7 +75,11 @@ function toScreen(at: Vector) {
 const pinDrag = usePinDrag({
   zoom: () => store.state.zoom,
   onDrop: comments.movePin,
-  onClick: comments.toggleThread
+  onClick: comments.toggleThread,
+  canDrag: (threadId) => {
+    const thread = comments.threads.value.find((entry) => entry.id === threadId)
+    return !!thread && comments.canMovePin(thread)
+  }
 })
 
 // Pins show unless View → Comments hid them; the Comment tool always shows them, as in Figma.
@@ -192,6 +196,7 @@ function closeCard() {
           <CommentPin
             :author="author.name(pin.thread.author)"
             :color="pin.thread.authorColor"
+            :picture="pin.thread.authorAvatarUrl"
             :text="pin.thread.text"
             :at="pin.thread.createdAt"
             :active="activeThreadId === pin.thread.id"

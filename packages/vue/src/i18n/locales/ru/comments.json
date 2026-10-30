@@ -25,5 +25,13 @@
   "noMatches": "Нет подходящих комментариев.",
   "replyCount": "Ответы: {count}",
   "commentDeleted": "Комментарий удалён",
-  "hideComments": "Скрыть комментарии"
+  "hideComments": "Скрыть комментарии",
+  "edit": "Изменить",
+  "editReply": "Изменить ответ",
+  "editComment": "Изменить комментарий",
+  "statusAll": "Все комментарии",
+  "statusUnresolved": "Только нерешённые",
+  "statusResolved": "Только решённые",
+  "onlyMentions": "Упоминания обо мне",
+  "pageOrder": "По порядку страниц"
 }

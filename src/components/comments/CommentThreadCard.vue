@@ -18,6 +18,7 @@ import PanelHeader from '@/components/ui/panel/PanelHeader.vue'
 import { comments } from '@/theme/comments'
 
 import CommentComposer from './CommentComposer.vue'
+import CommentEditor from './CommentEditor.vue'
 import CommentMessage from './CommentMessage.vue'
 
 /** An open thread: the comment, its replies, and a reply box, as in Figma's comment card. */
@@ -43,6 +44,11 @@ const reactionsOf = (reactions: CommentThread['reactions']) =>
 const replyText = ref('')
 const composer = useTemplateRef<{ focus: () => void }>('composer')
 const replies = computed(() => liveReplies(thread))
+const editingRoot = computed(
+  () => state.editing.value?.threadId === thread.id && state.editing.value.replyId === null
+)
+const editingReply = (replyId: string) =>
+  state.editing.value?.threadId === thread.id && state.editing.value.replyId === replyId
 
 function sendReply(text: string) {
   emit('reply', thread.id, text)
@@ -94,9 +100,17 @@ defineExpose({ focus: () => composer.value?.focus() })
     </PanelHeader>
 
     <div :class="ui.thread()">
+      <CommentEditor
+        v-if="editingRoot"
+        :initial="thread.text"
+        @save="state.saveEdit"
+        @cancel="state.cancelEdit"
+      />
       <CommentMessage
+        v-else
         :author="thread.author"
         :color="thread.authorColor"
+        :picture="thread.authorAvatarUrl"
         :at="thread.createdAt"
         :text="thread.text"
         :reactions="reactionsOf(thread.reactions)"
@@ -104,27 +118,44 @@ defineExpose({ focus: () => composer.value?.focus() })
         :can-react="state.can.value.react"
         @react="state.react(thread.id, null, $event)"
       />
-      <CommentMessage
-        v-for="entry in replies"
-        :key="entry.id"
-        :author="entry.author"
-        :color="entry.authorColor"
-        :at="entry.createdAt"
-        :text="entry.text"
-        :reactions="reactionsOf(entry.reactions)"
-        :me-id="state.meId.value"
-        :can-react="state.can.value.react"
-        @react="state.react(thread.id, entry.id, $event)"
-      >
-        <template #actions>
-          <IconButton
-            :label="messages.deleteReply"
-            @click="emit('deleteReply', thread.id, entry.id)"
-          >
-            <icon-lucide-trash-2 class="size-3" />
-          </IconButton>
-        </template>
-      </CommentMessage>
+      <template v-for="entry in replies" :key="entry.id">
+        <CommentEditor
+          v-if="editingReply(entry.id)"
+          :initial="entry.text"
+          :label="messages.editReply"
+          @save="state.saveEdit"
+          @cancel="state.cancelEdit"
+        />
+        <CommentMessage
+          v-else
+          :author="entry.author"
+          :color="entry.authorColor"
+          :picture="entry.authorAvatarUrl"
+          :at="entry.createdAt"
+          :text="entry.text"
+          :reactions="reactionsOf(entry.reactions)"
+          :me-id="state.meId.value"
+          :can-react="state.can.value.react"
+          @react="state.react(thread.id, entry.id, $event)"
+        >
+          <template #actions>
+            <IconButton
+              v-if="state.canEdit(thread, entry.id)"
+              :label="messages.editReply"
+              data-command="comment-edit-reply"
+              @click="state.startEdit(thread.id, entry.id)"
+            >
+              <icon-lucide-pencil class="size-3" />
+            </IconButton>
+            <IconButton
+              :label="messages.deleteReply"
+              @click="emit('deleteReply', thread.id, entry.id)"
+            >
+              <icon-lucide-trash-2 class="size-3" />
+            </IconButton>
+          </template>
+        </CommentMessage>
+      </template>
     </div>
 
     <div v-if="state.can.value.comment" :class="ui.composerSlot()">

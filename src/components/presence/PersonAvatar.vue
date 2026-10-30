@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { colorToCSS } from '@open-pencil/scene-graph/color'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { useCollaborationMessages } from '@open-pencil/vue'
 
+import { safeAvatarSource } from '@/app/comments/avatar'
 import { initials } from '@/app/shell/ui'
 import { avatar } from '@/theme/collaboration/avatar'
 import { avatarStack } from '@/theme/collaboration/avatar-stack'
@@ -19,7 +20,8 @@ const {
   size = 'sm',
   following = false,
   interactive = false,
-  voice
+  voice,
+  picture = undefined
 } = defineProps<{
   name: string
   color: Color
@@ -28,10 +30,17 @@ const {
   following?: boolean
   interactive?: boolean
   voice?: PresenceVoice
+  /** workos: a host's picture of the person; initials stay until it loads and when it cannot. */
+  picture?: string
 }>()
 
 const messages = useCollaborationMessages()
 const ui = avatarStack()
+const imageSource = computed(() => safeAvatarSource(picture))
+const imageState = ref<'loading' | 'loaded' | 'failed'>('loading')
+watch(imageSource, () => {
+  imageState.value = 'loading'
+})
 const voiceState = computed(() => {
   if (!voice) return 'none'
   return voice.speaking ? 'speaking' : 'listening'
@@ -44,7 +53,20 @@ const voiceState = computed(() => {
       :class="avatar({ size, bordered: true, following, interactive, voice: voiceState })"
       :style="{ background: colorToCSS(color) }"
     >
-      {{ initials(name) }}
+      <template v-if="imageState !== 'loaded'">{{ initials(name) }}</template>
+      <img
+        v-if="imageSource && imageState !== 'failed'"
+        v-show="imageState === 'loaded'"
+        :src="imageSource"
+        alt=""
+        data-slot="avatar-image"
+        class="size-full rounded-full object-cover"
+        referrerpolicy="no-referrer"
+        decoding="async"
+        draggable="false"
+        @load="imageState = 'loaded'"
+        @error="imageState = 'failed'"
+      />
     </span>
     <span
       v-if="voice?.muted"

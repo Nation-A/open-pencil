@@ -1,11 +1,13 @@
 import { computed, type Ref } from 'vue'
 
 import { commentAnchor, type CommentThread, type SceneGraph } from '@open-pencil/scene-graph'
+import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import {
   commentCapabilities,
   commentsHost,
   newOpId,
+  setPendingPinMove,
   toggleReaction,
   type CommentOp,
   type CommentOpResult
@@ -81,6 +83,32 @@ export function createHostActions(options: {
     })
   }
 
+  /** Whether the signed-in person wrote the thread (replyId null) or the reply, and may comment. */
+  function ownsMessage(thread: CommentThread, replyId: string | null): boolean {
+    const id = meId.value
+    if (!id || !can.value.comment) return false
+    const target = replyId ? thread.replies.find((entry) => entry.id === replyId) : thread
+    return !!target && !target.deleted && target.authorId === id
+  }
+
+  /** Moves the person's own pin: shown at the new place at once, put back if the host refuses. */
+  async function move(graph: SceneGraph, threadId: string, at: Vector) {
+    const thread = threads.value.find((entry) => entry.id === threadId)
+    if (!thread || !ownsMessage(thread, null)) return
+    const { nodeId, nodeName, offsetX, offsetY, x, y } = commentAnchor(graph, thread.pageId, at)
+    setPendingPinMove(threadId, { nodeId, nodeName, offsetX, offsetY, x, y })
+    const result = await send({
+      type: 'move',
+      opId: newOpId(),
+      threadId,
+      anchor: { kind: 'canvas_point', pageId: thread.pageId, nodeId, offsetX, offsetY, x, y }
+    })
+    if (!result?.ok) setPendingPinMove(threadId, null)
+    // On success the pin stays until the host's next delivery reports it there; a host that never does
+    // would otherwise pin it to the old spot forever, so the move is dropped after a while.
+    else setTimeout(() => setPendingPinMove(threadId, null), 5000)
+  }
+
   /** Toggles the signed-in person's emoji on a thread (replyId null) or a reply. */
   function react(threadId: string, replyId: string | null, emoji: string) {
     const id = meId.value
@@ -92,5 +120,5 @@ export function createHostActions(options: {
     void send({ type: 'react', opId: newOpId(), threadId, replyId, emoji, on })
   }
 
-  return { can, members, meId, create, reply, resolve, remove, edit, react }
+  return { can, members, meId, create, reply, resolve, remove, edit, react, move, ownsMessage }
 }

@@ -154,3 +154,19 @@ export function deleteCommentReply(thread: CommentThread, replyId: string): Comm
     )
   }
 }
+
+/** A thread's own text (replyId null) or one reply's replaced; `mentions` is kept for host-stored comments. */
+export function editCommentText(
+  thread: CommentThread,
+  replyId: string | null,
+  text: string,
+  mentions?: string[]
+): CommentThread {
+  if (replyId === null) return { ...thread, text, ...(mentions ? { mentions } : {}) }
+  return {
+    ...thread,
+    replies: thread.replies.map((entry) =>
+      entry.id === replyId ? { ...entry, text, ...(mentions ? { mentions } : {}) } : entry
+    )
+  }
+}

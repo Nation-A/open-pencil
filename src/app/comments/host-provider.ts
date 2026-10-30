@@ -11,6 +11,7 @@ import type { CommentReaction, CommentThread } from '@open-pencil/scene-graph'
 export interface CommentsHostMember {
   id: string
   name: string
+  /** Shown on the pin, the card and the @mention list; an image that fails to load falls back to initials. */
   avatarUrl?: string
 }
 
@@ -47,6 +48,13 @@ export type CommentOp =
       mentions: string[]
     }
   | { type: 'resolve'; opId: string; threadId: string; resolved: boolean }
+  /**
+   * The thread's author drags its pin elsewhere. `anchor` is the new place, computed like `create`'s: `nodeId`
+   * is the top-level layer now under the pin (offsets are from its top-left corner), or null on bare canvas.
+   * The editor shows the pin at the new place at once and puts it back if the result is not `ok`; the host
+   * only moves pins of threads the caller started, and answers through `subscribe` like any other op.
+   */
+  | { type: 'move'; opId: string; threadId: string; anchor: CommentAnchorInput }
   | {
       type: 'react'
       opId: string
@@ -68,7 +76,10 @@ export interface CommentOpResult {
 export interface CommentsHost {
   me: CommentsHostMe
   capabilities: CommentsHostCapabilities
-  /** The editor's tools are limited to Comment (and Hand) when true; commenting stays on `capabilities.comment`. */
+  /**
+   * The document is not editable: the tools are limited to Comment (and Hand), and keyboard shortcuts,
+   * paste, cut and file drops that would change the design do nothing. Commenting stays on `capabilities.comment`.
+   */
   readOnly?: boolean
   /** People with access, for @mention completion. */
   members: CommentsHostMember[]
@@ -83,6 +94,31 @@ export const commentsHost = shallowRef<CommentsHost | null>(null)
 export const hostThreads = shallowRef<CommentThread[]>([])
 export const hostRevision = shallowRef(0)
 
+/** Pins moved by the signed-in person and not yet confirmed by the host: where each is shown meanwhile. */
+export type PinMove = Pick<CommentAnchorInput, 'nodeId' | 'offsetX' | 'offsetY' | 'x' | 'y'> & {
+  nodeName: string | null
+}
+export const pendingPinMoves = shallowRef<ReadonlyMap<string, PinMove>>(new Map())
+
+export function setPendingPinMove(threadId: string, move: PinMove | null): void {
+  const next = new Map(pendingPinMoves.value)
+  if (move) next.set(threadId, move)
+  else next.delete(threadId)
+  pendingPinMoves.value = next
+}
+
+/** The threads with each unconfirmed pin move applied; a thread the host already reports there is left alone. */
+export function applyPinMoves(
+  threads: CommentThread[],
+  moves: ReadonlyMap<string, PinMove>
+): CommentThread[] {
+  if (moves.size === 0) return threads
+  return threads.map((thread) => {
+    const move = moves.get(thread.id)
+    return move ? { ...thread, ...move } : thread
+  })
+}
+
 let unsubscribe: (() => void) | null = null
 
 /** Injects (or with null, removes) the host's comment store. */
@@ -92,10 +128,26 @@ export function setCommentsHost(host: CommentsHost | null): void {
   commentsHost.value = host
   hostThreads.value = []
   hostRevision.value = 0
+  pendingPinMoves.value = new Map()
   if (!host) return
   unsubscribe = host.subscribe((threads, rev) => {
     if (commentsHost.value !== host) return
     hostThreads.value = threads
+    // A move the host now reports is no longer pending.
+    if (pendingPinMoves.value.size > 0) {
+      const next = new Map(pendingPinMoves.value)
+      for (const thread of threads) {
+        const move = next.get(thread.id)
+        if (
+          move &&
+          thread.x === move.x &&
+          thread.y === move.y &&
+          (thread.nodeId ?? null) === move.nodeId
+        )
+          next.delete(thread.id)
+      }
+      if (next.size !== pendingPinMoves.value.size) pendingPinMoves.value = next
+    }
     hostRevision.value = rev
   })
 }

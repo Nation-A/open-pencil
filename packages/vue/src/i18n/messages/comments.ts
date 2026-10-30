@@ -29,7 +29,15 @@ export const commentMessageDefaults = {
   noMatches: 'No comments match.',
   replyCount: params('Replies: {count}'),
   commentDeleted: 'Comment deleted',
-  hideComments: 'Hide comments'
+  hideComments: 'Hide comments',
+  edit: 'Edit',
+  editReply: 'Edit reply',
+  editComment: 'Edit comment',
+  statusAll: 'All comments',
+  statusUnresolved: 'Unresolved only',
+  statusResolved: 'Resolved only',
+  onlyMentions: 'Mentions of me',
+  pageOrder: 'Page order'
 } as const
 
 export const commentMessages = i18n('comments', commentMessageDefaults)

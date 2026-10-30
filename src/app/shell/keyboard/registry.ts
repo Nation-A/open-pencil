@@ -5,10 +5,13 @@ import { onScopeDispose } from 'vue'
 import { editorCommandMetadata } from '@open-pencil/vue'
 import type { EditorCommandId } from '@open-pencil/vue'
 
-import { embedded } from '@/app/embedded'
+import { commentsHost } from '@/app/comments/host-provider'
+import { documentLocked, LOCKED_SHORTCUT_IDS } from '@/app/comments/read-only'
 import { useComments } from '@/app/comments/use'
 import { requestRenameSelection } from '@/app/editor/selection/rename-dialog'
 import { TOOL_SHORTCUTS } from '@/app/editor/session'
+import { embedded } from '@/app/embedded'
+import { allowedTools } from '@/app/embedded-comments'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import { setSnappingPreference } from '@/app/settings/preferences/apply'
 import { isButtonActivation, isEditing } from '@/app/shell/keyboard/focus'
@@ -142,6 +145,8 @@ function bindToolShortcuts(bindings: KeyBindingMap, options: KeyboardShortcutRun
     if (!tool) continue
     bindings[code] = (event: KeyboardEvent) => {
       event.preventDefault()
+      // workos: a read-only document keeps only the tools its host's person may use.
+      if (documentLocked.value && !allowedTools(commentsHost.value)?.has(tool)) return
       options.spaceTool.resetToolBeforeSpace()
       options.store.setTool(tool)
     }
@@ -259,7 +264,13 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       keys: appMenuTinykeysShortcut('close') ?? '$mod+KeyW',
       run: ({ closeActiveTab }) => closeActiveTab()
     },
-    { id: 'new-tab', keys: ['$mod+KeyN', '$mod+KeyT'], run: ({ createTab }) => { if (!embedded.value) createTab() } },
+    {
+      id: 'new-tab',
+      keys: ['$mod+KeyN', '$mod+KeyT'],
+      run: ({ createTab }) => {
+        if (!embedded.value) createTab()
+      }
+    },
     {
       id: 'rename-selection',
       keys: appMenuTinykeysShortcut('selection.rename') ?? '$mod+KeyR',
@@ -328,6 +339,13 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       .flatMap((shortcut) => [shortcut.keys].flat())
   )
   bindToolShortcuts(bindings, runOptions(new KeyboardEvent('keydown')))
+  // workos: the keys a read-only document still answers; tool keys check their tool themselves.
+  const lockedKeys = new Set([
+    ...shortcuts
+      .filter((shortcut) => LOCKED_SHORTCUT_IDS.has(shortcut.id))
+      .flatMap((shortcut) => [shortcut.keys].flat()),
+    ...Object.keys(TOOL_SHORTCUTS)
+  ])
 
   for (const shortcut of shortcuts) {
     bindShortcut(shortcut.global ? globalBindings : bindings, shortcut.keys, (event) => {
@@ -343,6 +361,7 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
         keys,
         (event: KeyboardEvent) => {
           if (shouldIgnoreShortcut(event, options, historyKeys.has(keys))) return
+          if (documentLocked.value && !lockedKeys.has(keys)) return
           if (options.store.state.play && !previewKeys.has(keys)) return
           handler(event)
         }

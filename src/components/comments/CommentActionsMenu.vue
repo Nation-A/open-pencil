@@ -72,6 +72,16 @@ async function copyText() {
     <icon-lucide-circle-check v-else :class="menuCls.icon" />
     <span>{{ thread.resolved ? messages.reopen : messages.resolve }}</span>
   </component>
+  <component
+    :is="Item"
+    v-if="comments.canEdit(thread, null)"
+    :class="menuCls.item"
+    data-command="comment-edit"
+    @select="comments.startEdit(thread.id, null)"
+  >
+    <icon-lucide-pencil :class="menuCls.icon" />
+    <span>{{ messages.edit }}</span>
+  </component>
   <component :is="Item" :class="menuCls.item" data-command="comment-copy" @select="copyText">
     <icon-lucide-copy :class="menuCls.icon" />
     <span>{{ messages.copyText }}</span>

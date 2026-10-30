@@ -15,6 +15,7 @@ import CommentTime from './CommentTime.vue'
 const {
   author = '',
   color,
+  picture = undefined,
   text = '',
   at = '',
   active = false,
@@ -24,6 +25,7 @@ const {
 } = defineProps<{
   author?: string
   color?: Color
+  picture?: string
   text?: string
   at?: string
   active?: boolean
@@ -48,7 +50,7 @@ const ui = comments()
     :class="ui.pin()"
   >
     <template v-if="!draft">
-      <PersonAvatar :name="author" :color="who.color(color)" />
+      <PersonAvatar :name="author" :color="who.color(color)" :picture="picture" />
       <!-- An open or moving pin stays a bubble; its thread or its new place is what matters. -->
       <span v-if="text && !active && !dragging" :class="ui.pinPreview()" aria-hidden="true">
         <span :class="ui.pinPreviewClip()">

@@ -33,6 +33,9 @@ export const comments = tv({
     messageActions:
       'ml-auto flex shrink-0 opacity-0 group-focus-within/message:opacity-100 group-hover/message:opacity-100',
     messageText: 'col-start-2 min-w-0 text-xs break-words text-surface',
+    // workos: a message turned into an editor in place, with Save and Cancel under it.
+    editor: 'flex flex-col gap-1.5',
+    editorActions: 'flex justify-end gap-1',
     composerSlot: 'border-t border-border p-2',
     // One line with the send button beside it, growing as the comment does, as in Figma.
     composer:

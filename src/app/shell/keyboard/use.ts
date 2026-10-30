@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useEditorCommands, useViewportKind } from '@open-pencil/vue'
 
 import { useAIChat } from '@/app/ai/chat/use'
+import { bindReadOnlyGuards } from '@/app/comments/read-only'
 import { useEditorStore } from '@/app/editor/active-store'
 import { createKeyboardActions } from '@/app/shell/keyboard/actions'
 import { bindEditorClipboard } from '@/app/shell/keyboard/clipboard'
@@ -29,6 +30,7 @@ export function useKeyboard() {
     setOpacityTarget
   })
 
+  bindReadOnlyGuards()
   bindEditorClipboard(store)
   bindNudgeKeys(store)
 

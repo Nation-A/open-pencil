@@ -1,11 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import {
-  hasNewerComments,
-  mergeCommentThreads,
-  type CommentThread
-} from '@open-pencil/scene-graph'
-
+import { hasNewerComments, mergeCommentThreads, type CommentThread } from '@open-pencil/scene-graph'
 
 function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
   return {

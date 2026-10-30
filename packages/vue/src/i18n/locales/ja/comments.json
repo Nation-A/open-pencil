@@ -25,5 +25,13 @@
   "noMatches": "一致するコメントはありません。",
   "replyCount": "返信: {count}",
   "commentDeleted": "コメントを削除しました",
-  "hideComments": "コメントを非表示"
+  "hideComments": "コメントを非表示",
+  "edit": "編集",
+  "editReply": "返信を編集",
+  "editComment": "コメントを編集",
+  "statusAll": "すべてのコメント",
+  "statusUnresolved": "未解決のみ",
+  "statusResolved": "解決済みのみ",
+  "onlyMentions": "自分へのメンション",
+  "pageOrder": "ページ順"
 }

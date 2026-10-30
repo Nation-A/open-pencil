@@ -42,6 +42,7 @@ const people = computed<PresencePersonRow[]>(() =>
     clientId: index,
     name: author.name(entry.author),
     color: author.color(entry.authorColor),
+    avatarUrl: entry.authorAvatarUrl,
     agents: []
   }))
 )

@@ -1,3 +1,5 @@
+import { watch, watchEffect, type Ref } from 'vue'
+
 import type { Tool } from '@open-pencil/core/editor'
 import {
   readComments,
@@ -6,7 +8,8 @@ import {
   type CommentThread
 } from '@open-pencil/scene-graph'
 
-import type { CommentsHost } from '@/app/comments/host-provider'
+import { commentsHost, type CommentsHost } from '@/app/comments/host-provider'
+import type { EditorStore } from '@/app/editor/active-store'
 
 /**
  * workos: the editor-side rules of a host-owned comment store: which tools a commenter keeps, and the
@@ -67,4 +70,22 @@ export async function importLegacyComments(
   } finally {
     importing.delete(graph)
   }
+}
+
+/** A commenter keeps the Comment tool only, and the document's old comments move to the host once. */
+export function bindHostRules(storeRef: Ref<EditorStore | undefined>): void {
+  watchEffect(() => {
+    const store = storeRef.value
+    const allowed = allowedTools(commentsHost.value)
+    if (store && allowed && !allowed.has(store.state.activeTool)) {
+      store.setTool(fallbackTool(allowed))
+    }
+  })
+  watch(
+    [storeRef, commentsHost],
+    ([store, current]) => {
+      if (store && current) void importLegacyComments(current, store.graph)
+    },
+    { immediate: true }
+  )
 }

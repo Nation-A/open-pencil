@@ -25,5 +25,13 @@
   "noMatches": "Aucun commentaire ne correspond.",
   "replyCount": "Réponses : {count}",
   "commentDeleted": "Commentaire supprimé",
-  "hideComments": "Masquer les commentaires"
+  "hideComments": "Masquer les commentaires",
+  "edit": "Modifier",
+  "editReply": "Modifier la réponse",
+  "editComment": "Modifier le commentaire",
+  "statusAll": "Tous les commentaires",
+  "statusUnresolved": "Non résolus uniquement",
+  "statusResolved": "Résolus uniquement",
+  "onlyMentions": "Mes mentions",
+  "pageOrder": "Ordre des pages"
 }

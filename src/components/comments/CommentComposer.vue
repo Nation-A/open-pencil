@@ -17,17 +17,25 @@ import {
   type MentionMember
 } from '@/app/comments/mentions'
 import { useComments } from '@/app/comments/use'
+import PersonAvatar from '@/components/presence/PersonAvatar.vue'
 import AppButton from '@/components/ui/button/AppButton.vue'
+import { PEER_COLORS } from '@/constants'
 import { comments } from '@/theme/comments'
 
 /**
  * Where a comment or reply is written. Enter sends and Shift+Enter starts a new line or list
  * item; Figma's shortcuts format the selection as Markdown (`format.ts`).
  */
-const { label, bare = false } = defineProps<{
+const {
+  label,
+  bare = false,
+  hideSend = false
+} = defineProps<{
   label: string
   /** The composer is its card's whole content, as a new comment's is. */
   bare?: boolean
+  /** workos: no send button; the owner draws its own Save, as an edit in place does. */
+  hideSend?: boolean
 }>()
 
 const emit = defineEmits<{ submit: [text: string]; cancel: [] }>()
@@ -166,10 +174,11 @@ defineExpose({ focus })
         role="option"
         :aria-selected="index === highlighted"
         :data-mention-id="member.id"
-        class="cursor-pointer truncate px-3 py-1 text-surface hover:bg-hover aria-selected:bg-hover"
+        class="flex cursor-pointer items-center gap-2 px-3 py-1 text-surface hover:bg-hover aria-selected:bg-hover"
         @pointerdown.prevent="pickMention(member)"
       >
-        {{ member.name }}
+        <PersonAvatar :name="member.name" :color="PEER_COLORS[0]" :picture="member.avatarUrl" />
+        <span class="truncate">{{ member.name }}</span>
       </li>
     </ul>
     <textarea
@@ -186,6 +195,7 @@ defineExpose({ focus })
       @keydown.escape.stop.prevent="onEscape"
     />
     <AppButton
+      v-if="!hideSend"
       type="submit"
       color="primary"
       variant="solid"

@@ -75,4 +75,3 @@ describe('document comments', () => {
     expect(commentAnchor(graph, page.id, { x: 115, y: 115 }).nodeId).toBe(frame.id)
   })
 })
-

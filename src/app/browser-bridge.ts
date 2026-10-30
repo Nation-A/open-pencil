@@ -54,6 +54,8 @@ export interface OpenPencilWindowAPI {
   getStore?: () => EditorStore
   setChatTransport?: (factory: () => ChatTransport<UIMessage>) => void
   openFile?: (path: string) => Promise<void>
+  /** workos: opens a document (`.fig`, `.pen`, …) from bytes the host already holds, the way a picked file opens (a tab; the untouched first tab is reused). */
+  openDocumentFile?: (file: File) => Promise<void>
   test?: OpenPencilTestHooks
 }
 
@@ -124,6 +126,10 @@ export function exposeChatTransportOverride(
 
 export function setOpenPencilOpenFileHandler(openFile: (path: string) => Promise<void>) {
   windowAPI().openFile = openFile
+}
+
+export function setOpenPencilOpenDocumentHandler(openDocument: (file: File) => Promise<void>) {
+  windowAPI().openDocumentFile = openDocument
 }
 
 /** workos: lets a host page supply the collaboration transport and start or join rooms. */

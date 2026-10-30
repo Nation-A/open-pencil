@@ -4,7 +4,7 @@ import { uniq } from 'es-toolkit/array'
 import { BUILTIN_IO_FORMATS, IORegistry } from '@open-pencil/core/io'
 
 import { embedded, embeddedLocalFiles } from '@/app/embedded'
-import { setOpenPencilOpenFileHandler } from '@/app/browser-bridge'
+import { setOpenPencilOpenDocumentHandler, setOpenPencilOpenFileHandler } from '@/app/browser-bridge'
 import {
   resolveBrowserFileURL,
   MAX_REMOTE_DOCUMENT_BYTES,
@@ -56,6 +56,7 @@ if (IS_BROWSER && 'window' in globalThis) {
   setOpenPencilOpenFileHandler(async (path: string) => {
     await openBrowserFileFromURL(resolveBrowserFileURL(path))
   })
+  setOpenPencilOpenDocumentHandler((file: File) => openDesignFile(file))
 }
 
 /** Fetches a document over HTTP and opens it in a new tab. Browser builds only. */

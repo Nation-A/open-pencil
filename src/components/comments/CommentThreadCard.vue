@@ -10,6 +10,7 @@ import { computed, ref, useTemplateRef } from 'vue'
 import { liveReplies, type CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
+import { useComments } from '@/app/comments/use'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import { useMenuUI } from '@/components/ui/menu/menu'
 import MenuScrollArea from '@/components/ui/menu/MenuScrollArea.vue'
@@ -35,6 +36,10 @@ const messages = useCommentMessages()
 const common = useCommonMessages()
 const menuCls = useMenuUI({ content: 'min-w-40' })
 const ui = comments()
+const state = useComments()
+// workos: host-stored comments carry reactions (possibly none); the stock ones do not.
+const reactionsOf = (reactions: CommentThread['reactions']) =>
+  state.hosted.value ? (reactions ?? []) : undefined
 const replyText = ref('')
 const composer = useTemplateRef<{ focus: () => void }>('composer')
 const replies = computed(() => liveReplies(thread))
@@ -75,6 +80,7 @@ defineExpose({ focus: () => composer.value?.focus() })
         <IconButton
           :label="thread.resolved ? messages.reopen : messages.resolve"
           :active="thread.resolved"
+          :disabled="!state.can.value.resolve"
           data-command="comment-resolve"
           @click="emit('resolve', thread.id, !thread.resolved)"
         >
@@ -93,6 +99,10 @@ defineExpose({ focus: () => composer.value?.focus() })
         :color="thread.authorColor"
         :at="thread.createdAt"
         :text="thread.text"
+        :reactions="reactionsOf(thread.reactions)"
+        :me-id="state.meId.value"
+        :can-react="state.can.value.react"
+        @react="state.react(thread.id, null, $event)"
       />
       <CommentMessage
         v-for="entry in replies"
@@ -101,6 +111,10 @@ defineExpose({ focus: () => composer.value?.focus() })
         :color="entry.authorColor"
         :at="entry.createdAt"
         :text="entry.text"
+        :reactions="reactionsOf(entry.reactions)"
+        :me-id="state.meId.value"
+        :can-react="state.can.value.react"
+        @react="state.react(thread.id, entry.id, $event)"
       >
         <template #actions>
           <IconButton
@@ -113,7 +127,7 @@ defineExpose({ focus: () => composer.value?.focus() })
       </CommentMessage>
     </div>
 
-    <div :class="ui.composerSlot()">
+    <div v-if="state.can.value.comment" :class="ui.composerSlot()">
       <CommentComposer
         ref="composer"
         v-model="replyText"

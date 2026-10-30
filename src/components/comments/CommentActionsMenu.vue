@@ -11,6 +11,7 @@ import { computed } from 'vue'
 import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
+import { mentionsToPlain } from '@/app/comments/mentions'
 import { useComments } from '@/app/comments/use'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { useActionToast } from '@/app/shell/toast/action'
@@ -44,7 +45,7 @@ const Separator = computed(() =>
 )
 
 async function copyText() {
-  await copy(thread.text)
+  await copy(mentionsToPlain(thread.text))
   showActionToast(common.value.copied)
 }
 </script>
@@ -64,6 +65,7 @@ async function copyText() {
     :is="Item"
     :class="menuCls.item"
     data-command="comment-resolve"
+    :disabled="!comments.can.value.resolve"
     @select="comments.setResolved(thread.id, !thread.resolved)"
   >
     <icon-lucide-rotate-ccw v-if="thread.resolved" :class="menuCls.icon" />

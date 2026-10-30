@@ -21,7 +21,9 @@ import type { EditorStore } from '@/app/editor/active-store'
  */
 export function followDocumentComments(
   storeRef: Ref<EditorStore | undefined>,
-  onDocumentChange: () => void
+  onDocumentChange: () => void,
+  /** workos: false while a host owns the comment store; the document's plugin data is then never written. */
+  canWrite: () => boolean = () => true
 ) {
   const threads = ref<CommentThread[]>([])
   // Where each pinned thread's layer last put it, kept as layers change rather than as pins are
@@ -50,7 +52,7 @@ export function followDocumentComments(
    * winning copy lacks is merged back in and written again.
    */
   function reconcile() {
-    if (!bound) return
+    if (!bound || !canWrite()) return
     const incoming = readComments(bound.graph)
     if (!hasNewerComments(threads.value, incoming)) {
       show(incoming)
@@ -72,7 +74,7 @@ export function followDocumentComments(
 
   /** Change the open document's comments, starting from what it holds now. */
   function mutate(change: (current: CommentThread[]) => CommentThread[]) {
-    if (!bound) return
+    if (!bound || !canWrite()) return
     const next = change(readComments(bound.graph))
     writeComments(bound.graph, next)
     show(next)

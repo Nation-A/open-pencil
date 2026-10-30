@@ -4,6 +4,11 @@ import { watch } from 'vue'
 import type { CollabReturn } from '@/app/collab/context'
 import type { RoomStatus } from '@/app/collab/room/status'
 import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
+import {
+  focusCommentThread,
+  setCommentsHost,
+  type CommentsHost
+} from '@/app/comments/host-provider'
 import type { EditorStore } from '@/app/editor/session/create'
 import {
   setEmbedded,
@@ -70,6 +75,10 @@ export interface OpenPencilWindowAPI {
   setEmbeddedChrome?: (chrome: EmbeddedChrome | null) => void
   /** workos: runs what the hidden header's buttons did: 'open-settings' or 'toggle-left-panel'. */
   chromeCommand?: (name: EmbeddedChromeCommand) => void
+  /** workos: hands comment storage to the host (threads in, ops out, no plugin-data writes); null restores the stock provider. */
+  setCommentsHost?: (host: CommentsHost | null) => void
+  /** workos: opens a thread: its page, its pin, its card. Resolves false when the thread never shows up. */
+  focusComment?: (threadId: string) => Promise<boolean>
   setCollabTransport?: (join: JoinCollabRoom | null) => void
   collabHost?: OpenPencilCollabHost
   getStore?: () => EditorStore
@@ -96,6 +105,8 @@ function windowAPI(): OpenPencilWindowAPI {
       }
     })
   }
+  window.openPencil.setCommentsHost ??= setCommentsHost
+  window.openPencil.focusComment ??= focusCommentThread
   window.openPencil.getStore ??= () => {
     if (!activeStore) throw new Error('OpenPencil store not initialized')
     return activeStore

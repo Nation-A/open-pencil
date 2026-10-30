@@ -479,9 +479,20 @@ export interface SourceLibraryPublication {
 }
 
 /** A reply in a canvas comment thread. */
+/** workos: one emoji and who reacted with it, as a host's comment store reports it. */
+export interface CommentReaction {
+  emoji: string
+  userIds: string[]
+}
+
 export interface CommentReply {
   id: string
   author: string
+  /** workos: the host's actor id, avatar and mentions, set only on host-stored comments. */
+  authorId?: string
+  authorAvatarUrl?: string
+  mentions?: string[]
+  reactions?: CommentReaction[]
   /** The author's collaboration color when they wrote it, for their avatar. */
   authorColor?: Color
   /** Markdown: bold, italic, strikethrough, links and lists. */
@@ -506,6 +517,13 @@ export interface CommentThread {
   x: number
   y: number
   author: string
+  /** workos: the host's actor id, avatar, mentions and reactions, set only on host-stored comments. */
+  authorId?: string
+  authorAvatarUrl?: string
+  mentions?: string[]
+  reactions?: CommentReaction[]
+  /** workos: the document revision the host pinned the thread to. */
+  revisionId?: string | null
   /** The author's collaboration color when they wrote it, for their avatar. */
   authorColor?: Color
   /** Markdown: bold, italic, strikethrough, links and lists. */

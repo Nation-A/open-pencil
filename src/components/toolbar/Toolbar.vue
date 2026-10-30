@@ -9,10 +9,12 @@ import {
   useViewportKind
 } from '@open-pencil/vue'
 
+import { commentsHost } from '@/app/comments/host-provider'
 import { useEditorStore } from '@/app/editor/active-store'
 import { toolIcons } from '@/app/editor/icons'
-import { toolbarItems } from '@/app/editor/toolbar/layout'
+import { toolbarItems, type ToolbarItem } from '@/app/editor/toolbar/layout'
 import { toolShortcutLabels } from '@/app/editor/toolbar/shortcuts'
+import { allowedTools } from '@/app/embedded-comments'
 import { appPreferences } from '@/app/settings/preferences/store'
 import { useActionToast } from '@/app/shell/toast/action'
 import InsertIconButton from '@/components/icon-picker/InsertIconButton.vue'
@@ -33,9 +35,17 @@ const { menu } = useI18n()
 const toolLabels = useToolLabels()
 
 const toolShortcuts = toolShortcutLabels()
-const items = computed(() =>
-  toolbarItems(appPreferences.value.toolbar, toolLabels.value, toolShortcuts)
-)
+const items = computed<ToolbarItem[]>(() => {
+  // workos: a read-only commenter's toolbar is Comment and Hand, whatever the layout hides.
+  const allowed = allowedTools(commentsHost.value)
+  if (allowed) {
+    return [...allowed].map((key) => ({
+      kind: 'tool',
+      tool: { key, label: toolLabels.value[key], shortcut: toolShortcuts[key] }
+    }))
+  }
+  return toolbarItems(appPreferences.value.toolbar, toolLabels.value, toolShortcuts)
+})
 const tools = computed(() =>
   items.value.flatMap((item) => (item.kind === 'tool' ? [item.tool] : []))
 )

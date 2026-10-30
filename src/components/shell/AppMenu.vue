@@ -19,6 +19,7 @@ import IconChevronRight from '~icons/lucide/chevron-right'
 
 import { vTestId, useI18n } from '@open-pencil/vue'
 
+import { embeddedChrome } from '@/app/embedded'
 import { useEditorStore } from '@/app/editor/active-store'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import { useAppMenu } from '@/app/shell/menu/app-menu'
@@ -68,7 +69,7 @@ const { overflowStart, overflowEnd, scrollTowardHidden } = useScrollOverflow(men
 
 <template>
   <div class="shrink-0 border-b border-border">
-    <div class="flex items-center gap-2 px-2 py-1.5">
+    <div v-if="!embeddedChrome?.hideHeader" class="flex items-center gap-2 px-2 py-1.5">
       <BrandMark
         data-test-id="app-logo"
         variant="app-icon"

@@ -1,4 +1,5 @@
 import type { ChatTransport, UIMessage } from 'ai'
+import { watch } from 'vue'
 
 import type { CollabReturn } from '@/app/collab/context'
 import type { RoomStatus } from '@/app/collab/room/status'
@@ -8,12 +9,18 @@ import {
   setEmbedded,
   setEmbeddedLocalFiles,
   setEmbeddedShare,
+  setEmbeddedChrome,
+  reportLeftPanelOpen,
+  runEmbeddedChromeCommand,
+  type EmbeddedChrome,
+  type EmbeddedChromeCommand,
   type EmbeddedLocalFiles,
   type EmbeddedShare
 } from '@/app/embedded'
 import { createNavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import type { NavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import { appRuntimeConfig } from '@/app/runtime/config'
+import { openSettingsDialog } from '@/app/settings/dialog'
 import { IS_BROWSER } from '@/constants'
 
 export interface OpenPencilTestHooks {
@@ -59,6 +66,10 @@ export interface OpenPencilWindowAPI {
   /** workos: hands the Share button to the host. Set: no peer-to-peer popover, a click calls `onShare()`. Null restores it. */
   setEmbeddedShare?: (share: EmbeddedShare | null) => void
   /** workos: replaces Trystero for every room joined afterwards. Pass null to restore it. */
+  /** workos: hands the window's top row to the host. `{ hideHeader: true }` drops the sidebar's logo / name / gear / panel-toggle row; `onLeftPanelChange(open)` fires once and on every change. Null restores it. */
+  setEmbeddedChrome?: (chrome: EmbeddedChrome | null) => void
+  /** workos: runs what the hidden header's buttons did: 'open-settings' or 'toggle-left-panel'. */
+  chromeCommand?: (name: EmbeddedChromeCommand) => void
   setCollabTransport?: (join: JoinCollabRoom | null) => void
   collabHost?: OpenPencilCollabHost
   getStore?: () => EditorStore
@@ -76,6 +87,15 @@ function windowAPI(): OpenPencilWindowAPI {
   window.openPencil.setEmbedded ??= setEmbedded
   window.openPencil.setEmbeddedLocalFiles ??= setEmbeddedLocalFiles
   window.openPencil.setEmbeddedShare ??= setEmbeddedShare
+  window.openPencil.setEmbeddedChrome ??= setEmbeddedChrome
+  window.openPencil.chromeCommand ??= (name) => {
+    runEmbeddedChromeCommand(name, {
+      openSettings: () => openSettingsDialog(),
+      toggleLeftPanel: () => {
+        if (activeStore) activeStore.state.showUI = !activeStore.state.showUI
+      }
+    })
+  }
   window.openPencil.getStore ??= () => {
     if (!activeStore) throw new Error('OpenPencil store not initialized')
     return activeStore
@@ -86,6 +106,7 @@ function windowAPI(): OpenPencilWindowAPI {
 export function setOpenPencilStore(store: EditorStore) {
   activeStore = store
   if (!IS_BROWSER) return
+  watch(() => store.state.showUI, reportLeftPanelOpen, { immediate: true })
   const api = windowAPI()
   if (appRuntimeConfig.navigationBenchmark) {
     const testHooks = (api.test ??= {})

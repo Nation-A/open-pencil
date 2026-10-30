@@ -68,6 +68,7 @@ export function useCollab() {
       if (!store || activeTab.value?.kind === 'home') return null
       return shareDocument(store, roomId).roomId
     },
+    ensureAssetsAvailable: () => activeRoom.value?.ensureAssetsAvailable() ?? Promise.resolve(),
     disconnect: () => {
       const room = activeRoom.value
       if (room) leaveRoom(room)

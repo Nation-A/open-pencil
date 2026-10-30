@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
 import { openRoomSession, type RoomSession, type RoomSessionOptions } from '@/app/collab/session'
+import { setCollabTransportOverride } from '@/app/collab/transport'
+import type { CollabRoomTransport } from '@/app/collab/transport/types'
 import { createEditorStore, type EditorStore } from '@/app/editor/session'
 import { presenceOf } from '@/app/presence/registry'
 
@@ -51,6 +53,98 @@ function firstPageId(store: EditorStore) {
 }
 
 describe('room sessions', () => {
+  test('an injected joiner waits for initial sync before an empty graph can be exported', async () => {
+    const rooms = createMemoryRooms(),
+      delayed: (() => void)[] = []
+    let joins = 0
+    setCollabTransportOverride((roomId) => {
+      const room = rooms.join(roomId),
+        guest = ++joins === 2
+      return {
+        ...room,
+        assetProtocol: 2,
+        assetBase: { revision: 1, epoch: 1 },
+        makeAction(namespace) {
+          const [send, receive] = room.makeAction(namespace)
+          return [
+            send,
+            (handler) =>
+              receive((data, peerId) => {
+                if (guest && namespace === 'sync-reply') delayed.push(() => handler(data, peerId))
+                else handler(data, peerId)
+              })
+          ]
+        }
+      }
+    })
+    const hostStore = newStore(),
+      guestStore = newStore()
+    hostStore.graph.createNode('RECTANGLE', firstPageId(hostStore), { id: 'ready:1' })
+    const host = openRoomSession({ roomId: ROOM_A, store: hostStore, origin: 'shared' })
+    host.shareDocument()
+    const guest = openRoomSession({ roomId: ROOM_A, store: guestStore, origin: 'joined' })
+    let ready = false
+    const waiting = guest.ensureAssetsAvailable().then(() => {
+      ready = true
+      return undefined
+    })
+    try {
+      await rooms.settle()
+      expect(ready).toBe(false)
+      expect(guest.hasDocument.value).toBe(false)
+      for (const deliver of delayed) deliver()
+      await rooms.settle()
+      await waiting
+      expect(ready).toBe(true)
+      expect(getNodeOrThrow(guestStore.graph, 'ready:1').type).toBe('RECTANGLE')
+    } finally {
+      host.dispose()
+      guest.dispose()
+      hostStore.preparationController.dispose()
+      guestStore.preparationController.dispose()
+      setCollabTransportOverride(null)
+    }
+  })
+
+  test('an injected joiner emits no CRDT writes before its host link is ready', async () => {
+    const frames: string[] = []
+    const transport: CollabRoomTransport = {
+      assetProtocol: 2,
+      assetBase: { revision: 1, epoch: 1 },
+      makeAction: (namespace) => [
+        (bytes) => {
+          if (bytes.length) frames.push(namespace)
+        },
+        () => {
+          /* Host link not ready. */
+        }
+      ],
+      onPeerJoin: () => {
+        /* Host link not ready. */
+      },
+      onPeerLeave: () => {
+        /* Host link not ready. */
+      },
+      signalingConnected: () => false,
+      discoveryMs: 0,
+      media: null,
+      leave: async () => {
+        /* No socket in this contract. */
+      }
+    }
+    const store = newStore()
+    setCollabTransportOverride(() => transport)
+    const session = openRoomSession({ roomId: ROOM_A, store, origin: 'joined' })
+    try {
+      await Promise.resolve()
+      expect(frames.filter((namespace) => namespace === 'yjs-update')).toEqual([])
+    } finally {
+      session.dispose()
+      store.preparationController.dispose()
+      setCollabTransportOverride(null)
+    }
+  })
+
   test("a joined tab shows the sharer's document, with its name, once it arrives", async () => {
     await withRooms(async (open, settle) => {
       const host = newStore('Checkout flow')

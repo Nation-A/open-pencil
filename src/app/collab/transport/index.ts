@@ -15,6 +15,8 @@ export function setCollabTransportOverride(join: JoinCollabRoom | null): void {
   injectedJoin = join
 }
 
+export const hasCollabTransportOverride = () => injectedJoin !== null
+
 export const joinCollabRoom: JoinCollabRoom = (roomId) =>
   injectedJoin
     ? injectedJoin(roomId)

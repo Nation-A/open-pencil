@@ -14,6 +14,7 @@ import { exposeAutomationTestRequests } from '@/app/automation/bridge/test-hooks
 import { startMCPRuntime, stopMCPRuntime } from '@/app/automation/mcp/runtime'
 import { startWebMCP } from '@/app/automation/webmcp/runtime'
 import { exposeCollabHost, exposeCollaborationActions } from '@/app/browser-bridge'
+import { preserveBaseImages } from '@/app/collab/assets/channel'
 import { useJoinRoom } from '@/app/collab/join'
 import { bindDesktopRoomLinks } from '@/app/collab/room/links'
 import { syncRoomRoute } from '@/app/collab/route'
@@ -23,13 +24,13 @@ import type { PendingOpenFile } from '@/app/document/io/pending-open'
 import { openPendingFiles } from '@/app/document/io/pending-open'
 import { openWebLinkFromLocation, withoutWebLinkParams } from '@/app/document/io/web-link'
 import { focusNodesByName } from '@/app/editor/selection/focus'
+import { embedded } from '@/app/embedded'
 import { notificationMessages } from '@/app/i18n/notifications'
 import { appRuntimeConfig } from '@/app/runtime/config'
 import { useDocumentDrop } from '@/app/shell/document-drop'
 import { useKeyboard } from '@/app/shell/keyboard/use'
 import { useEditorMenu } from '@/app/shell/menu/use'
 import { toast } from '@/app/shell/ui'
-import { embedded } from '@/app/embedded'
 import {
   activeTab,
   closeTab,
@@ -122,6 +123,8 @@ exposeCollabHost(collab, (roomId) => {
   const previous = activeTab.value
   const joined = joinRoomFromInput(roomId)
   if (joined && previous && previous.kind === 'document' && previous.id !== activeTab.value?.id) {
+    if (activeTab.value?.kind === 'document')
+      preserveBaseImages(previous.store.graph, activeTab.value.store.graph)
     void closeTab(previous.id, 'discard')
   }
   return joined

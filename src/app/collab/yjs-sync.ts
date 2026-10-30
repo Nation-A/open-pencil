@@ -53,6 +53,7 @@ type YjsGraphSyncOptions = {
   getYnodes: () => YNodes | null
   getYimages: () => YImages | null
   setSuppressYjsEvents: (value: boolean) => void
+  publishImage?: (hash: string, data: Uint8Array) => void
 }
 
 function logCollabSyncError(context: string, error: unknown) {
@@ -175,7 +176,8 @@ export function createYjsGraphSync({
   getYdoc,
   getYnodes,
   getYimages,
-  setSuppressYjsEvents
+  setSuppressYjsEvents,
+  publishImage
 }: YjsGraphSyncOptions) {
   let pendingPageSwitch: { store: EditorStore; pageId: string } | undefined
   let shared: SharedTree | null = null
@@ -202,7 +204,10 @@ export function createYjsGraphSync({
     for (const fill of node.fills) {
       if (fill.imageHash && !localYimages.has(fill.imageHash)) {
         const data = graph.images.get(fill.imageHash)
-        if (data) localYimages.set(fill.imageHash, data)
+        if (data) {
+          if (publishImage) publishImage(fill.imageHash, data)
+          else localYimages.set(fill.imageHash, data)
+        }
       }
     }
   }

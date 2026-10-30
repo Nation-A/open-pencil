@@ -17,6 +17,8 @@ export interface CollabMediaTransport {
 }
 
 export interface CollabRoomTransport {
+  readonly assetProtocol?: 2
+  readonly assetBase?: { revision: number; epoch: number }
   makeAction(namespace: string): CollabAction
   onPeerJoin(handler: (peerId: string) => void): void
   onPeerLeave(handler: (peerId: string) => void): void

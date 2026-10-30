@@ -2,12 +2,12 @@ import type { ChatTransport, UIMessage } from 'ai'
 
 import type { CollabReturn } from '@/app/collab/context'
 import type { RoomStatus } from '@/app/collab/room/status'
+import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
 import type { EditorStore } from '@/app/editor/session/create'
+import { setEmbedded, setEmbeddedLocalFiles, type EmbeddedLocalFiles } from '@/app/embedded'
 import { createNavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
 import type { NavigationBenchmarkHooks } from '@/app/performance/navigation/hooks'
-import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
 import { appRuntimeConfig } from '@/app/runtime/config'
-import { setEmbedded, setEmbeddedLocalFiles, type EmbeddedLocalFiles } from '@/app/embedded'
 import { IS_BROWSER } from '@/constants'
 
 export interface OpenPencilTestHooks {
@@ -33,6 +33,8 @@ export interface OpenPencilTestHooks {
 
 /** workos: room control a host page drives in production builds. */
 export interface OpenPencilCollabHost {
+  assetProtocol: 2
+  ensureAssetsAvailable: () => Promise<void>
   /** Puts the active tab's document into a room (a generated ID when none is given); null if there is no document. */
   shareCurrentDoc: (roomId?: string) => string | null
   /** Opens a room in a tab of its own, as pasting its link does. */
@@ -138,6 +140,8 @@ export function exposeCollabHost(collab: CollabReturn, joinRoom: (roomId: string
   const api = windowAPI()
   api.setCollabTransport = setCollabTransportOverride
   api.collabHost = {
+    assetProtocol: 2,
+    ensureAssetsAvailable: collab.ensureAssetsAvailable,
     shareCurrentDoc: (roomId) => collab.shareCurrentDoc(roomId),
     joinRoom,
     leave: collab.disconnect,

@@ -5,6 +5,7 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
 import { shareAgentPreviews } from '@/app/collab/agent-preview'
+import { createExternalAssetChannel, type ExternalAssetChannel } from '@/app/collab/assets/channel'
 import { buildRemotePeers } from '@/app/collab/awareness'
 import { useCollabIdentity } from '@/app/collab/identity'
 import { publishLocalAgents } from '@/app/collab/local-awareness'
@@ -18,6 +19,7 @@ import {
   type YNodes
 } from '@/app/collab/shared-tree/fields'
 import type { JoinCollabRoom } from '@/app/collab/transport'
+import { hasCollabTransportOverride } from '@/app/collab/transport'
 import type { RemotePeer } from '@/app/collab/types'
 import { bindVariableSync, type YRecords } from '@/app/collab/variables'
 import { attachRoomVoice, type RoomVoice } from '@/app/collab/voice/room'
@@ -47,6 +49,7 @@ export interface RoomSession {
   updateSelection(ids: string[]): void
   /** Writes the tab's whole document into the room and makes its root the room's. */
   shareDocument(): void
+  ensureAssetsAvailable(): Promise<void>
   /** Leaves the room and releases its connection, presence, and saved-copy handle. */
   dispose(): void
 }
@@ -87,6 +90,8 @@ export function openRoomSession({
   unreachableMs = ROOM_UNREACHABLE_MS,
   tickMs = ROOM_STATUS_TICK_MS
 }: RoomSessionOptions): RoomSession {
+  const externalMode = hasCollabTransportOverride()
+  let assets: ExternalAssetChannel | undefined
   const ydoc = new Y.Doc()
   const awareness = new awarenessProtocol.Awareness(ydoc)
   const ynodes: YNodes = ydoc.getMap('nodes')
@@ -94,7 +99,15 @@ export function openRoomSession({
   const meta = ydoc.getMap<unknown>('meta')
   const yvariables: YRecords = ydoc.getMap('variables')
   const ycollections: YRecords = ydoc.getMap('collections')
-  const persistence = openSavedCopy(roomId, ydoc)
+  // Embedded WorkOS owns canonical revisions; do not resurrect binary-bearing legacy room caches.
+  const persistence = externalMode
+    ? {
+        whenSynced: Promise.resolve(),
+        destroy() {
+          /* Host revisions own recovery, without local CRDT persistence. */
+        }
+      }
+    : openSavedCopy(roomId, ydoc)
 
   const peers = shallowRef<RemotePeer[]>([])
   const hasDocument = ref(false)
@@ -125,6 +138,7 @@ export function openRoomSession({
     getYdoc: () => (disposed ? null : ydoc),
     getYnodes: () => (disposed ? null : ynodes),
     getYimages: () => (disposed ? null : yimages),
+    publishImage: externalMode ? (hash, bytes) => assets?.publish(hash, bytes) : undefined,
     setSuppressYjsEvents: (value) => {
       suppressYjsEvents = value
     }
@@ -179,6 +193,19 @@ export function openRoomSession({
     updatePeersList: updatePeers,
     joinRoom
   })
+  if (externalMode) {
+    const base = connection.room.assetBase
+    if (connection.room.assetProtocol !== 2 || !base)
+      throw new Error('collab_asset_protocol_required')
+    assets = createExternalAssetChannel({
+      graph: store.graph,
+      doc: ydoc,
+      room: connection.room,
+      base,
+      render: () => store.requestRender()
+    })
+    meta.set('workosAssetFormat', 2)
+  }
   broadcastIdentity()
 
   void persistence.whenSynced.then(() => {
@@ -229,6 +256,7 @@ export function openRoomSession({
     updateSelection(ids) {
       awareness.setLocalStateField('selection', ids)
     },
+    ensureAssetsAvailable: () => assets?.ensureAvailable() ?? Promise.resolve(),
     shareDocument() {
       sync.syncAllNodesToYjs()
       variableSync.share()
@@ -241,6 +269,7 @@ export function openRoomSession({
       unbindGraphEvents()
       variableSync.dispose()
       disposed = true
+      assets?.dispose()
       connectionTimer.pause()
       stopNameWatch()
       stopZoomWatch()

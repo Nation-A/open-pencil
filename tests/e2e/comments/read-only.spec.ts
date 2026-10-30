@@ -109,11 +109,11 @@ test('a read-only document cannot be changed from the panels, menus or shortcuts
   await page.mouse.up()
 
   // Properties: the design sections are inert; a click and typing change nothing.
-  await expect(page.locator('[data-test-id="design-panel-single"] [data-locked]')).toHaveAttribute(
+  await expect(page.getByTestId('design-panel-single').locator('[data-locked]')).toHaveAttribute(
     'inert',
     ''
   )
-  const x = page.locator('[data-test-id="design-panel-single"] [data-property="x"]').first()
+  const x = page.getByTestId('design-panel-single').locator('[data-property="x"]').first()
   const xBox = await x.boundingBox()
   if (xBox) {
     await page.mouse.click(xBox.x + 10, xBox.y + 8)
@@ -260,7 +260,7 @@ test('a host that turns read-only off and on again changes the same editor', asy
 })
 
 /** Drops an SVG file on the canvas the way a drag from the desktop delivers it. */
-function dropSvg(page: Page) {
+function dropSVG(page: Page) {
   return page.getByTestId('canvas-element').evaluate((canvas) => {
     const bounds = canvas.getBoundingClientRect()
     const transfer = new DataTransfer()
@@ -282,7 +282,7 @@ function dropSvg(page: Page) {
 test('a file dropped on a read-only document adds nothing', async ({ page }) => {
   await open(page, true)
   const before = await documentFingerprint(page)
-  await dropSvg(page)
+  await dropSVG(page)
   await page.waitForTimeout(600)
   expect(await documentFingerprint(page)).toBe(before)
   await expect(page.getByRole('tab')).toHaveCount(1)
@@ -291,6 +291,6 @@ test('a file dropped on a read-only document adds nothing', async ({ page }) => 
 test('control: the same drop on an editable document places the file', async ({ page }) => {
   await open(page, false)
   const before = await documentFingerprint(page)
-  await dropSvg(page)
+  await dropSVG(page)
   await expect.poll(() => documentFingerprint(page)).not.toBe(before)
 })

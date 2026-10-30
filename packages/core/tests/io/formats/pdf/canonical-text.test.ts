@@ -77,6 +77,37 @@ describe('canonical PDF clusters', () => {
     expect(node.text).toBe('A한B')
   })
 
+  test('rejects a style boundary inside a combining or decomposed Hangul cluster', () => {
+    const graph = new SceneGraph(),
+      page = graph.getPages()[0]
+    for (const text of ['éx', '한x']) {
+      const node = graph.createNode('TEXT', page.id, {
+        text,
+        styleRuns: [{ start: 1, length: 1, style: { fontWeight: 700 } }]
+      })
+      expect(() => assertCanonicalClusterStyles(graph, [node.id])).toThrow('single text style')
+      const cluster = text.length - 1
+      graph.updateNode(node.id, {
+        styleRuns: [{ start: cluster, length: 1, style: { fontWeight: 700 } }]
+      })
+      expect(() => assertCanonicalClusterStyles(graph, [node.id])).not.toThrow()
+    }
+  })
+
+  test('keeps Hebrew with combining marks on the existing path', async () => {
+    const doc = await document()
+    const capture = spyOn(doc, 'text')
+    try {
+      await withCanonicalPDFText(doc, async () => {
+        doc.text('שׁ', 10, 10)
+      })
+      expect(capture.mock.calls[0][0]).toBe('שׁ')
+      expect(doc.output().includes('/ActualText')).toBe(false)
+    } finally {
+      capture.mockRestore()
+    }
+  })
+
   test('restores normal text behavior after a conversion exception', async () => {
     const doc = await document()
     const error: unknown = await withCanonicalPDFText(doc, async () => {

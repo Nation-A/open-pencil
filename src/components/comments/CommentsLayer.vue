@@ -125,6 +125,7 @@ const cardReference = computed(() => {
 
 function placeDraft(event: PointerEvent) {
   if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return
+  if (!comments.can.value.comment) return
   // With a card open, a click on the canvas only closes it, as in Figma.
   if (comments.closeCard()) return
   const rect = event.currentTarget.getBoundingClientRect()

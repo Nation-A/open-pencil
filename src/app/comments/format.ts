@@ -1,3 +1,5 @@
+import { mentionsToPlain } from './mentions'
+
 /**
  * Figma's comment formatting, written as Markdown into the plain text a comment stores: bold,
  * italic and strikethrough wrap the selection, a link wraps it as the link text, and the list
@@ -143,7 +145,7 @@ export function continueList({ value, start, end }: CommentEdit): CommentEdit | 
 
 /** A comment's text without its Markdown, for the one-paragraph preview in the comments list. */
 export function commentPreview(text: string): string {
-  return text
+  return mentionsToPlain(text)
     .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
     .replace(/(\*\*|~~|\*|~)(\S(?:.*?\S)?)\1/gu, '$2')
     .replace(/^\s*(?:\d+\.|[-*])\s+/gmu, '')

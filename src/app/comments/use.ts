@@ -1,5 +1,5 @@
 import { createEventHook, createGlobalState } from '@vueuse/core'
-import { computed, ref, type WritableComputedRef } from 'vue'
+import { computed, ref, watch, watchEffect, type WritableComputedRef } from 'vue'
 
 import {
   commentAnchor,
@@ -9,13 +9,15 @@ import {
   deleteCommentReply,
   deleteCommentThread,
   replyToCommentThread,
-  resolveCommentThread
+  resolveCommentThread,
+  type CommentThread
 } from '@open-pencil/scene-graph'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import { useCollabIdentity } from '@/app/collab/identity'
 import { useActiveEditorStoreRef } from '@/app/editor/active-store'
 import type { PagePoint } from '@/app/editor/pages/point'
+import { allowedTools, fallbackTool, importLegacyComments } from '@/app/embedded-comments'
 import { setCommentsOnCanvas } from '@/app/settings/preferences/apply'
 import {
   appPreferences,
@@ -24,6 +26,8 @@ import {
 } from '@/app/settings/preferences/store'
 
 import { followDocumentComments } from './document'
+import { createHostActions } from './host-actions'
+import { commentsHost, hostThreads, setCommentFocusHandler } from './host-provider'
 
 /** A comment preference the list and menus read and change in place. */
 function preference<K extends keyof CommentPreferences>(
@@ -59,14 +63,43 @@ export const useComments = createGlobalState(() => {
   const listSort = preference('sort')
 
   // Another document is open: nothing from the last one stays open or half-written.
-  const documentComments = followDocumentComments(storeRef, () => {
-    activeThreadId.value = null
-    draft.value = null
+  const documentComments = followDocumentComments(
+    storeRef,
+    () => {
+      activeThreadId.value = null
+      draft.value = null
+    },
+    () => !commentsHost.value
+  )
+  const { mutate, update, pinPosition } = documentComments
+
+  // workos: with a host the threads are the host's and every change is a request to it.
+  const host = commentsHost
+  const hosted = computed(() => host.value !== null)
+  const threads = computed<CommentThread[]>(() =>
+    host.value ? hostThreads.value : documentComments.threads.value
+  )
+  const remote = createHostActions({ threads, activeThreadId })
+  const authorName = computed(() => host.value?.me.name ?? identity.name.value)
+
+  // workos: a commenter keeps the Comment tool only, and the document's old comments move to the host once.
+  watchEffect(() => {
+    const store = storeRef.value
+    const allowed = allowedTools(host.value)
+    if (store && allowed && !allowed.has(store.state.activeTool)) {
+      store.setTool(fallbackTool(allowed))
+    }
   })
-  const { threads, mutate, update, pinPosition } = documentComments
+  watch(
+    [storeRef, host],
+    ([store, current]) => {
+      if (store && current) void importLegacyComments(current, store.graph)
+    },
+    { immediate: true }
+  )
 
   function me() {
-    return { name: identity.name.value, color: identity.color }
+    return { name: authorName.value, color: identity.color }
   }
 
   function startDraft(at: PagePoint) {
@@ -92,6 +125,11 @@ export const useComments = createGlobalState(() => {
     const body = text.trim()
     const store = documentComments.store()
     if (!store || !place || !body) return
+    if (host.value) {
+      draft.value = null
+      void remote.create(store.graph, place, body)
+      return
+    }
     const thread = createCommentThread(store.graph, {
       pageId: place.pageId,
       at: place,
@@ -107,19 +145,22 @@ export const useComments = createGlobalState(() => {
   /** A dragged pin lands on whatever is under it now, as in Figma. */
   function movePin(threadId: string, at: Vector) {
     const store = documentComments.store()
-    if (!store) return
+    // workos: a host-stored pin stays where it was placed.
+    if (!store || host.value) return
     update(threadId, (thread) => ({ ...thread, ...commentAnchor(store.graph, thread.pageId, at) }))
   }
 
   function reply(threadId: string, text: string) {
     const body = text.trim()
     if (!body) return
+    if (host.value) return remote.reply(threadId, body)
     const entry = createCommentReply(me(), body, now())
     update(threadId, (thread) => replyToCommentThread(thread, entry))
   }
 
   function setResolved(threadId: string, resolved: boolean) {
-    update(threadId, (thread) => resolveCommentThread(thread, resolved, now()))
+    if (host.value) remote.resolve(threadId, resolved)
+    else update(threadId, (thread) => resolveCommentThread(thread, resolved, now()))
     // A resolved thread leaves the canvas unless resolved comments are shown.
     if (resolved && !listShowResolved.value && activeThreadId.value === threadId) {
       activeThreadId.value = null
@@ -132,12 +173,14 @@ export const useComments = createGlobalState(() => {
   }
 
   function confirmDelete(threadId: string) {
-    update(threadId, deleteCommentThread)
+    if (host.value) remote.remove(threadId, null)
+    else update(threadId, deleteCommentThread)
     if (activeThreadId.value === threadId) activeThreadId.value = null
   }
 
   function deleteReply(threadId: string, replyId: string) {
-    update(threadId, (thread) => deleteCommentReply(thread, replyId))
+    if (host.value) remote.remove(threadId, replyId)
+    else update(threadId, (thread) => deleteCommentReply(thread, replyId))
   }
 
   /** Show a thread: its page, centered on its pin, with its card open. */
@@ -163,7 +206,13 @@ export const useComments = createGlobalState(() => {
     activeThreadId,
     draft,
     onDeleteRequested: deleteRequested.on,
-    author: identity.name,
+    author: authorName,
+    hosted,
+    can: remote.can,
+    members: remote.members,
+    meId: remote.meId,
+    edit: remote.edit,
+    react: remote.react,
     showOnCanvas,
     listQuery,
     listShowResolved,
@@ -185,3 +234,23 @@ export const useComments = createGlobalState(() => {
     toggleOnCanvas
   }
 })
+
+// workos: `window.openPencil.focusComment` reaches the comments through this, as the bridge cannot import them.
+setCommentFocusHandler(focusComment)
+
+/**
+ * Opens a thread for a host that links to one (a notification, a mention): its page, its pin, its
+ * card. A thread the host has not delivered yet is opened as soon as it arrives, for a few seconds.
+ */
+async function focusComment(threadId: string): Promise<boolean> {
+  const comments = useComments()
+  const deadline = Date.now() + 5000
+  while (!comments.threads.value.some((thread) => thread.id === threadId && !thread.deleted)) {
+    if (Date.now() > deadline) return false
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 100)
+    })
+  }
+  await comments.focusThread(threadId)
+  return true
+}

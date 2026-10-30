@@ -1,1 +1,2 @@
 - A host that draws the window's top row can hide the sidebar header (logo, name, settings, panel toggle) and drive settings and the panel toggle through `window.openPencil.setEmbeddedChrome` and `chromeCommand`.
+- A host can own comment storage through `window.openPencil.setCommentsHost` (threads in, ops out, no plugin-data writes), with @mentions of members it lists, emoji reactions, commenter-only tools for a read-only document, and `focusComment(id)` to open a thread.

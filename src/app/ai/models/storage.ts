@@ -45,10 +45,40 @@ export function readLegacyAIModelStorage(key: LegacyAIModelStorageKey): string |
   return legacyValues[key].value
 }
 
+/**
+ * workos: once a host scopes AI to an actor, settings no longer live in the origin-wide slot. `null` is the legacy slot,
+ * `'blocked'` means no actor is active (nothing is read or written), anything else is that actor's own storage.
+ */
+export type AIModelSettingsRedirect = {
+  read(): unknown
+  write(value: unknown): void
+}
+let redirect: AIModelSettingsRedirect | 'blocked' | null = null
+
+export function redirectAIModelSettingsStorage(next: AIModelSettingsRedirect | 'blocked' | null): void {
+  redirect = next
+}
+
 export function readAIModelSettingsStorage(): unknown {
-  return modelSettings.value
+  if (redirect === 'blocked') return null
+  return redirect ? redirect.read() : modelSettings.value
 }
 
 export function writeAIModelSettingsStorage(value: unknown): void {
+  if (redirect === 'blocked') return
+  if (redirect) {
+    // A write queued for an actor that is no longer current is dropped, never redirected.
+    try {
+      redirect.write(value)
+    } catch (error) {
+      console.warn('Dropped an AI settings write for a scope that is no longer current', error)
+    }
+    return
+  }
   modelSettings.value = value
+}
+
+/** workos: the browser storage an actor's settings live in; kept here so no other module touches localStorage directly. */
+export function actorSettingsBackingStorage(): Storage {
+  return localStorage
 }

@@ -1,6 +1,11 @@
 import type { ChatTransport, UIMessage } from 'ai'
 import { watch } from 'vue'
 
+import {
+  activateActorAIScope,
+  invalidateActorAIScope,
+  refreshActorAISettings
+} from '@/app/ai/models/actor/runtime'
 import type { CollabReturn } from '@/app/collab/context'
 import type { RoomStatus } from '@/app/collab/room/status'
 import { setCollabTransportOverride, type JoinCollabRoom } from '@/app/collab/transport'
@@ -86,6 +91,15 @@ export interface OpenPencilWindowAPI {
   openFile?: (path: string) => Promise<void>
   /** workos: opens a document (`.fig`, `.pen`, …) from bytes the host already holds, the way a picked file opens (a tab; the untouched first tab is reused). */
   openDocumentFile?: (file: File) => Promise<void>
+  /** workos: binds AI settings and credentials to one actor; resolves with a 64-hex namespace. The host must authenticate the caller. */
+  // oxlint-ignore-next-line open-pencil/no-mixed-case-acronym-identifiers
+  activateWorkosAiScope?: (org: string, actor: string) => Promise<string>
+  /** workos: ends the actor scope; AI has no settings or credentials until the next activation. */
+  // oxlint-ignore-next-line open-pencil/no-mixed-case-acronym-identifiers
+  invalidateWorkosAiScope?: () => void
+  /** workos: re-reads the active actor's AI settings after the host wrote them. */
+  // oxlint-ignore-next-line open-pencil/no-mixed-case-acronym-identifiers
+  refreshWorkosAiSettings?: () => void
   test?: OpenPencilTestHooks
 }
 
@@ -106,6 +120,12 @@ function windowAPI(): OpenPencilWindowAPI {
     })
   }
   window.openPencil.setCommentsHost ??= setCommentsHost
+  // The host bridge looks these up by their published names, which the acronym-casing rule would rewrite.
+  Object.assign(window.openPencil, {
+    activateWorkosAiScope: window.openPencil['activateWorkosAiScope'] ?? activateActorAIScope,
+    invalidateWorkosAiScope: window.openPencil['invalidateWorkosAiScope'] ?? invalidateActorAIScope,
+    refreshWorkosAiSettings: window.openPencil['refreshWorkosAiSettings'] ?? refreshActorAISettings
+  })
   window.openPencil.focusComment ??= focusCommentThread
   window.openPencil.getStore ??= () => {
     if (!activeStore) throw new Error('OpenPencil store not initialized')

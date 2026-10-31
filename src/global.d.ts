@@ -22,6 +22,8 @@ declare global {
 
   interface Window {
     openPencil?: OpenPencilWindowAPI
+    /** workos: the host bridge's gateway-aware fetch, kept for actor-scoped AI models. */
+    __WORKOS_AI_FETCH__?: typeof fetch
     showOpenFilePicker?(options?: FilePickerOptions): Promise<FileSystemFileHandle[]>
     showSaveFilePicker?(options?: FilePickerOptions): Promise<FileSystemFileHandle>
     mockWindowOpen?(url: string): void

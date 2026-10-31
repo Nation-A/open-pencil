@@ -2,6 +2,11 @@ import type { LanguageModel } from 'ai'
 import { ref } from 'vue'
 
 import { createLanguageModel } from '@/app/ai/chat/model'
+import {
+  actorModelFetch,
+  assertActorScopeStillCurrent,
+  currentActorScope
+} from '@/app/ai/models/actor/runtime'
 import { modelConnection, resolveAIModelRole } from '@/app/ai/models/store'
 import type { AIModelConnection, AIModelRole, ResolvedAIModelRole } from '@/app/ai/models/types'
 import { appCredentialServices } from '@/app/settings/credentials/app'
@@ -86,7 +91,11 @@ export async function createAIModelRuntime(role: AIModelRole): Promise<AIModelRu
     return { kind: 'acp', role: resolved }
   }
 
+  // workos: under an actor scope the model is bound to that actor and stops working once the scope ends.
+  const scopedFetch = actorModelFetch()
+  const scope = currentActorScope()
   const apiKey = await resolveModelConnectionAPIKey(resolved.connection.id)
+  assertActorScopeStillCurrent(scope)
   if (!apiKey) throw new Error(`Credential is unavailable for the ${role} model role`)
   return {
     kind: 'direct',
@@ -98,6 +107,6 @@ export async function createAIModelRuntime(role: AIModelRole): Promise<AIModelRu
       customModelID: resolved.profile.customModelID,
       customBaseURL: resolved.connection.customBaseURL,
       customAPIType: resolved.connection.customAPIType
-    })
+    }, scopedFetch)
   }
 }

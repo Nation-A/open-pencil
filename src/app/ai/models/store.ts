@@ -1,6 +1,6 @@
 import { uniq } from 'es-toolkit'
 import * as v from 'valibot'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import {
   AI_PROVIDERS,
@@ -9,9 +9,10 @@ import {
   type AIProviderID
 } from '@open-pencil/core/constants'
 
+import { actorScopeMode } from '@/app/ai/models/actor/mode'
 import {
   readAIModelSettingsStorage,
-  readLegacyAIModelStorage,
+  readLegacyAIModelStorage as readLegacyAIModelStorageSlot,
   writeAIModelSettingsStorage
 } from '@/app/ai/models/storage'
 import {
@@ -193,6 +194,10 @@ export function parseAIModelSettings(value: unknown): AIModelSettings | null {
 }
 
 function legacySettings(): AIModelSettings {
+  // workos: under an actor scope the origin-wide legacy slots belong to nobody and are never read.
+  const readLegacyAIModelStorage = actorScopeMode()
+    ? () => null
+    : readLegacyAIModelStorageSlot
   const storedProvider = readLegacyAIModelStorage('ai-provider')
   const providerID = isProviderID(storedProvider) ? storedProvider : DEFAULT_AI_PROVIDER
   const provider = AI_PROVIDERS.find((definition) => definition.id === providerID)
@@ -245,7 +250,16 @@ function loadSettings(): AIModelSettings {
 
 export const aiModelSettings = ref<AIModelSettings>(loadSettings())
 
-watch(aiModelSettings, (settings) => writeAIModelSettingsStorage(settings), { deep: true })
+// workos: a reload shows what storage holds; writing it straight back would turn defaults into saved settings.
+let skipStorageWrite = false
+
+watch(
+  aiModelSettings,
+  (settings) => {
+    if (!skipStorageWrite) writeAIModelSettingsStorage(settings)
+  },
+  { deep: true }
+)
 
 function createConnectionId(): string {
   return `connection-${crypto.randomUUID()}`
@@ -498,6 +512,15 @@ export function setModelRoleAssignment(role: AIModelRole, assignment: AIModelRol
     if (role === 'vision' && !profile?.capabilities.includes('vision')) return
   }
   aiModelSettings.value.assignments[role] = assignment
+}
+
+/** workos: re-reads settings from whatever storage is active now (an actor's own, or defaults when none is). */
+export function reloadAIModelSettings(): void {
+  skipStorageWrite = true
+  aiModelSettings.value = loadSettings()
+  void nextTick(() => {
+    skipStorageWrite = false
+  })
 }
 
 export function replaceAIModelSettings(settings: AIModelSettings): void {

@@ -12,6 +12,7 @@ import {
 } from '@open-pencil/scene-graph'
 import { useI18n, useSceneComputed, useVariables } from '@open-pencil/vue'
 
+import { useEditorStore } from '@/app/editor/active-store'
 import {
   aliasCandidates,
   groupTree,
@@ -61,6 +62,8 @@ const wide = computed(() => width.value >= TOKENS_PANEL_SIDEBAR_WIDTH)
 
 const ctx = useVariables()
 const { editor } = ctx
+/** A read-only document lists its variables and values; what creates, edits or deletes them is not offered. */
+const readOnly = computed(() => useEditorStore().state.readOnly === true)
 const actions = useTokenActions(editor, (name) => messages.value.duplicateName({ name }))
 
 const selectedIds = ref<string[]>([])
@@ -333,7 +336,7 @@ const groupOptions = computed(() => groupEntries.value.map((entry) => entry.path
         <template #icon>
           <icon-lucide-folder class="size-5" />
         </template>
-        <template #action>
+        <template v-if="!readOnly" #action>
           <AppButton
             variant="soft"
             data-test-id="variables-create-collection"
@@ -392,8 +395,9 @@ const groupOptions = computed(() => groupEntries.value.map((entry) => entry.path
             :label="messages.collection"
             :ui="{ trigger: 'min-w-0 flex-1' }"
           />
-          <TokenAddMenu @add="addToken" />
+          <TokenAddMenu v-if="!readOnly" @add="addToken" />
           <IconButton
+            v-if="!readOnly"
             size="sm"
             :label="messages.createCollection"
             data-test-id="variables-add-collection"
@@ -470,7 +474,7 @@ const groupOptions = computed(() => groupEntries.value.map((entry) => entry.path
         />
         <TokenTypeFilter v-model="typeFilter" />
         <IconButton
-          v-if="!wide"
+          v-if="!wide && !readOnly"
           size="sm"
           :label="messages.createCollection"
           data-test-id="variables-add-collection"
@@ -478,7 +482,7 @@ const groupOptions = computed(() => groupEntries.value.map((entry) => entry.path
         >
           <icon-lucide-folder-plus class="size-4" />
         </IconButton>
-        <TokenAddMenu :labelled="wide" @add="addToken" />
+        <TokenAddMenu v-if="!readOnly" :labelled="wide" @add="addToken" />
         <slot name="actions" />
       </div>
       <div :class="ui.body()">

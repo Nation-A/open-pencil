@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { tv } from 'tailwind-variants'
+import { computed } from 'vue'
 
 import { useI18n } from '@open-pencil/vue'
 
+import { useEditorStore } from '@/app/editor/active-store'
 import type { GroupEntry } from '@/app/editor/tokens/model'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import AppBadge from '@/components/ui/feedback/AppBadge.vue'
@@ -26,6 +28,7 @@ const activeGroup = defineModel<string | null>('group', { default: null })
 const emit = defineEmits<{ addCollection: [] }>()
 
 const { variables } = useI18n()
+const readOnly = computed(() => useEditorStore().state.readOnly === true)
 const ui = tv(tokensPanelTheme)()
 </script>
 
@@ -35,6 +38,7 @@ const ui = tv(tokensPanelTheme)()
       <div :class="ui.sidebarHeading()">
         <h3 :class="ui.sectionTitle()">{{ variables.collections }}</h3>
         <IconButton
+          v-if="!readOnly"
           :label="variables.createCollection"
           data-test-id="variables-add-collection"
           @click="emit('addCollection')"

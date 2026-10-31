@@ -234,8 +234,9 @@ const { panels } = useI18n()
   >
     <LockedRegion>
       <PageSection />
-      <VariablesSection @open-dialog="openVariablesDialog(store)" />
     </LockedRegion>
+    <!-- Variables are listed for a viewer too, as in Figma; the dialog locks what edits them. -->
+    <VariablesSection @open-dialog="openVariablesDialog(store)" />
     <ExportSection />
   </div>
 </template>

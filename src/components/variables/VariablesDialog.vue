@@ -22,6 +22,7 @@ import { AppDialogClose, AppDialogRoot } from '@/components/ui/dialog'
 import TokensPanel from '@/components/variables/TokensPanel.vue'
 
 const store = useEditorStore()
+const readOnly = computed(() => store.state.readOnly === true)
 const open = computed({
   get: () => store.state.variablesOpen,
   set: (value: boolean) => {
@@ -56,6 +57,7 @@ let importRequest = 0
 
 /** Token files, a folder's worth, or a zip of them; the import dialog shows what they would do. */
 function importFiles(files: readonly File[]) {
+  if (readOnly.value) return
   const request = ++importRequest
   void (async () => {
     const sources = await readDesignTokenFiles(files)
@@ -103,6 +105,7 @@ function exportTokens() {
     <TokensPanel @copy="copyTokens" @export="exportTokens">
       <template #actions>
         <IconButton
+          v-if="!readOnly"
           :label="variables.importDesignTokens"
           data-test-id="variables-import-tokens"
           @click="tokenFiles.open()"

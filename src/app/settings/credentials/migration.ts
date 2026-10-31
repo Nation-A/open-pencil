@@ -1,5 +1,6 @@
 import { AI_PROVIDERS, type AIProviderID } from '@open-pencil/core/constants'
 
+import { actorScopeMode } from '@/app/ai/models/actor/mode'
 import { appCredentialStore } from '@/app/settings/credentials/app'
 import { credentialKey, credentialRef } from '@/app/settings/credentials/reference'
 import { browserCredentialStorage } from '@/app/settings/credentials/storage'
@@ -52,6 +53,7 @@ export function hasLegacyCredential(
   reference: CredentialRef,
   storage = browserCredentialStorage()
 ): boolean {
+  if (actorScopeMode()) return false
   if (!storage || storage.getItem(MIGRATION_VERSION_KEY) === MIGRATION_VERSION) return false
   return legacyCredentials(storage).some(
     (entry) =>
@@ -87,7 +89,10 @@ let migrationQueue: Promise<void> = Promise.resolve()
 
 /** Migrations share one destination store, so distinct sources must not interleave. */
 function enqueueMigration(storage: Storage): Promise<boolean> {
-  const migration = migrationQueue.then(() => migrateLegacyCredentials(storage, appCredentialStore))
+  const migration = migrationQueue.then(() =>
+    // workos: ownerless legacy credentials are never copied into an actor's store.
+    actorScopeMode() ? true : migrateLegacyCredentials(storage, appCredentialStore)
+  )
   migrationQueue = migration.then(
     () => undefined,
     () => undefined
@@ -98,7 +103,7 @@ function enqueueMigration(storage: Storage): Promise<boolean> {
 export async function initializeCredentialMigration(
   storage = browserCredentialStorage()
 ): Promise<boolean> {
-  if (!storage) return true
+  if (!storage || actorScopeMode()) return true
   let migration = migrationsInFlight.get(storage)
   if (!migration) {
     migration = enqueueMigration(storage).finally(() => {

@@ -39,6 +39,11 @@ export class SwitchableCredentialStore implements CredentialStore {
     return this.#delegate.remove(reference)
   }
 
+  /** workos: swaps the backend without copying anything, for stores whose contents must never move. */
+  replace(next: CredentialStore): void {
+    this.#delegate = next
+  }
+
   async switchTo(
     next: CredentialStore,
     references: CredentialRef[],

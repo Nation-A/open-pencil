@@ -25,6 +25,6 @@ function desktopFetch(): FetchFunction | undefined {
   return isTauri() ? tauriFetch : undefined
 }
 
-export function createLanguageModel(config: ModelConfig): LanguageModel {
-  return modelProviderAdapter(config.providerID).create(config, { fetch: desktopFetch() })
+export function createLanguageModel(config: ModelConfig, fetch?: FetchFunction): LanguageModel {
+  return modelProviderAdapter(config.providerID).create(config, { fetch: fetch ?? desktopFetch() })
 }

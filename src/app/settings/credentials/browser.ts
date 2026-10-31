@@ -60,8 +60,16 @@ export class BrowserCredentialStore implements CredentialStore {
   readonly #database: AppDatabase<CredentialDatabase>
   #masterKeyPromise?: Promise<CryptoKey>
 
-  constructor() {
+  constructor(private readonly namespace?: string) {
+    if (namespace !== undefined && !/^[0-9a-f]{64}$/.test(namespace)) {
+      throw new CredentialStoreError('invalid-reference', 'Credential namespace is invalid')
+    }
     this.#database = connectAppDatabase(credentialDatabase)
+  }
+
+  #key(reference: CredentialRef): string {
+    const key = credentialKey(reference)
+    return this.namespace === undefined ? key : `v2:${this.namespace}:${key}`
   }
 
   async availability(): Promise<CredentialStoreAvailability> {
@@ -78,7 +86,7 @@ export class BrowserCredentialStore implements CredentialStore {
   }
 
   async read(reference: CredentialRef): Promise<string | null> {
-    const key = credentialKey(reference)
+    const key = this.#key(reference)
     try {
       const database = await this.#database.open()
       const record = await database.get('credentials', key)
@@ -98,7 +106,7 @@ export class BrowserCredentialStore implements CredentialStore {
 
   async write(reference: CredentialRef, value: string): Promise<void> {
     validateCredentialValue(value)
-    const key = credentialKey(reference)
+    const key = this.#key(reference)
     try {
       const database = await this.#database.open()
       const masterKey = await this.#masterKey(database)
@@ -117,7 +125,7 @@ export class BrowserCredentialStore implements CredentialStore {
   async remove(reference: CredentialRef): Promise<void> {
     try {
       const database = await this.#database.open()
-      await database.delete('credentials', credentialKey(reference))
+      await database.delete('credentials', this.#key(reference))
     } catch (error) {
       throw this.#normalizeError(error)
     }
@@ -136,8 +144,16 @@ export class BrowserCredentialStore implements CredentialStore {
       'encrypt',
       'decrypt'
     ])
-    await database.put('metadata', generated, MASTER_KEY_ID)
-    return generated
+    try {
+      // Competing frames must never overwrite a master key already used to encrypt data.
+      await database.add('metadata', generated, MASTER_KEY_ID)
+      return generated
+    } catch (error) {
+      if (!(error instanceof Error) || error.name !== 'ConstraintError') throw error
+      const winner = await database.get('metadata', MASTER_KEY_ID)
+      if (!winner) throw error
+      return winner
+    }
   }
 
   #additionalData(key: string): ArrayBuffer {

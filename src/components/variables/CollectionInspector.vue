@@ -27,6 +27,7 @@ import {
   type ModeCondition
 } from '@/app/editor/tokens/conditions'
 import { modeAttributeText, modeConditionPlaceholder } from '@/app/editor/tokens/model'
+import LockedRegion from '@/components/properties/panel/LockedRegion.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import AppBadge from '@/components/ui/feedback/AppBadge.vue'
 import AppInput from '@/components/ui/input/AppInput.vue'
@@ -189,178 +190,188 @@ function attributeDone(event: KeyboardEvent) {
 
 <template>
   <aside :class="ui.inspector()" data-test-id="collection-inspector">
-    <section :class="ui.section()">
-      <span :class="ui.label()" class="flex items-center gap-1.5">
-        {{ variables.collection }}
-        <Tip v-if="isLibraryCollection(collection)" :label="variables.libraryCollectionHint">
-          <AppBadge>{{ variables.libraryCollection }}</AppBadge>
-        </Tip>
-      </span>
-      <div class="flex items-center gap-1">
-        <AppInput
-          v-model="draft.name"
-          size="sm"
-          class="min-w-0 flex-1"
-          :aria-label="variables.collection"
-          data-test-id="variables-collection-name"
-          @change="commitName"
-          @enter="done"
-        />
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger as-child>
-            <IconButton
-              :label="variables.collectionActions"
-              data-test-id="variables-collection-menu"
-            >
-              <icon-lucide-ellipsis class="size-3.5" />
-            </IconButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuContent side="bottom" :side-offset="4" align="end" :class="menu.content">
-              <MenuScrollArea>
-                <DropdownMenuItem
-                  :class="dangerItem"
-                  data-test-id="variables-delete-collection"
-                  @select="emit('remove')"
-                >
-                  <icon-lucide-trash-2 :class="menu.icon" />
-                  {{ variables.deleteCollection }}
-                </DropdownMenuItem>
-              </MenuScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
-      </div>
-      <label v-if="collection.modes.length > 1" :class="ui.field()">
-        <span :class="ui.label()">{{ variables.modeAttribute }}</span>
-        <AppInput
-          v-model="draft.attribute"
-          size="sm"
-          :placeholder="defaultModeAttributeName(collection)"
-          :state="attributeInvalid ? 'invalid' : 'idle'"
-          :aria-invalid="attributeInvalid"
-          :aria-describedby="attributeInvalid ? attributeErrorId : undefined"
-          :ui="{ input: 'font-mono' }"
-          data-test-id="variables-mode-attribute"
-          @change="commitAttribute"
-          @enter="attributeDone"
-        />
-        <p v-if="attributeInvalid" :id="attributeErrorId" :class="ui.error()" role="alert">
-          {{ variables.modeAttributeInvalid }}
-        </p>
-        <span v-else-if="attributeExample" :class="ui.hint()">{{
-          variables.modeAttributeHint({ example: attributeExample })
-        }}</span>
-      </label>
-    </section>
-
-    <section :class="ui.section()">
-      <div class="flex items-center justify-between">
-        <h3 :class="ui.sectionTitle()">{{ variables.modes }}</h3>
-        <IconButton
-          :label="variables.addMode"
-          data-test-id="variables-add-mode"
-          @click="emit('addMode')"
-        >
-          <icon-lucide-plus class="size-3.5" />
-        </IconButton>
-      </div>
-      <div
-        v-for="item in collection.modes"
-        :key="item.modeId"
-        :class="ui.mode()"
-        data-test-id="variables-mode"
-      >
+    <LockedRegion>
+      <section :class="ui.section()">
+        <span :class="ui.label()" class="flex items-center gap-1.5">
+          {{ variables.collection }}
+          <Tip v-if="isLibraryCollection(collection)" :label="variables.libraryCollectionHint">
+            <AppBadge>{{ variables.libraryCollection }}</AppBadge>
+          </Tip>
+        </span>
         <div class="flex items-center gap-1">
           <AppInput
-            v-model="draft.modeNames[item.modeId]"
+            v-model="draft.name"
             size="sm"
             class="min-w-0 flex-1"
-            :aria-label="variables.renameMode"
-            @change="commitModeName(item.modeId)"
+            :aria-label="variables.collection"
+            data-test-id="variables-collection-name"
+            @change="commitName"
             @enter="done"
           />
-          <AppBadge v-if="item.modeId === collection.defaultModeId">
-            {{ variables.defaultMode }}
-          </AppBadge>
           <DropdownMenuRoot>
             <DropdownMenuTrigger as-child>
-              <IconButton :label="variables.modeActions({ mode: item.name })">
+              <IconButton
+                :label="variables.collectionActions"
+                data-test-id="variables-collection-menu"
+              >
                 <icon-lucide-ellipsis class="size-3.5" />
               </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
               <DropdownMenuContent side="bottom" :side-offset="4" align="end" :class="menu.content">
                 <MenuScrollArea>
-                  <DropdownMenuItem :class="menu.item" @select="emit('duplicateMode', item.modeId)">
-                    <icon-lucide-copy :class="menu.icon" />
-                    {{ variables.duplicateMode }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    v-if="item.modeId !== collection.defaultModeId"
-                    :class="menu.item"
-                    @select="emit('setDefaultMode', item.modeId)"
-                  >
-                    <icon-lucide-pin :class="menu.icon" />
-                    {{ variables.setDefaultMode }}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator :class="menu.separator" />
                   <DropdownMenuItem
                     :class="dangerItem"
-                    :disabled="collection.modes.length <= 1"
-                    @select="emit('removeMode', item.modeId)"
+                    data-test-id="variables-delete-collection"
+                    @select="emit('remove')"
                   >
                     <icon-lucide-trash-2 :class="menu.icon" />
-                    {{ variables.deleteMode }}
+                    {{ variables.deleteCollection }}
                   </DropdownMenuItem>
                 </MenuScrollArea>
               </DropdownMenuContent>
             </DropdownMenuPortal>
           </DropdownMenuRoot>
         </div>
-
-        <template v-if="item.modeId === collection.defaultModeId">
-          <span :class="ui.label()">{{ variables.alwaysOn }}</span>
-          <code :class="ui.modeCSS()">:root</code>
-        </template>
-        <template v-else>
-          <span :class="ui.label()">{{ variables.appliesWhen }}</span>
-          <AppSelect
-            :model-value="condition(item.modeId).kind"
-            :options="kindOptions"
-            :label="`${item.name}: ${variables.appliesWhen}`"
-            :ui="{ trigger: 'w-full' }"
-            data-test-id="variables-mode-condition"
-            @update:model-value="setKind(item.modeId, $event)"
-          />
+        <label v-if="collection.modes.length > 1" :class="ui.field()">
+          <span :class="ui.label()">{{ variables.modeAttribute }}</span>
           <AppInput
-            v-if="'width' in condition(item.modeId)"
-            v-model="draft.widths[item.modeId]"
-            type="number"
+            v-model="draft.attribute"
             size="sm"
-            :aria-label="`${item.name}: ${variables.conditionWidth}`"
-            data-test-id="variables-mode-width"
-            @change="commitWidth(item.modeId)"
-            @enter="done"
-          >
-            <template #trailing><span :class="ui.hint()">px</span></template>
-          </AppInput>
-          <AppInput
-            v-if="condition(item.modeId).kind === 'custom'"
-            v-model="draft.custom[item.modeId]"
-            size="sm"
-            :aria-label="`${item.name}: ${variables.condition}`"
-            :placeholder="modeConditionPlaceholder(collection, item.modeId)"
+            :placeholder="defaultModeAttributeName(collection)"
+            :state="attributeInvalid ? 'invalid' : 'idle'"
+            :aria-invalid="attributeInvalid"
+            :aria-describedby="attributeInvalid ? attributeErrorId : undefined"
             :ui="{ input: 'font-mono' }"
-            @change="commitCustom(item.modeId)"
-            @enter="done"
+            data-test-id="variables-mode-attribute"
+            @change="commitAttribute"
+            @enter="attributeDone"
           />
-          <code v-else :class="ui.modeCSS()" data-test-id="variables-mode-css">{{
-            writtenAs(item.modeId)
-          }}</code>
-          <span :class="ui.hint()">{{ hint(item.modeId) }}</span>
-        </template>
-      </div>
-    </section>
+          <p v-if="attributeInvalid" :id="attributeErrorId" :class="ui.error()" role="alert">
+            {{ variables.modeAttributeInvalid }}
+          </p>
+          <span v-else-if="attributeExample" :class="ui.hint()">{{
+            variables.modeAttributeHint({ example: attributeExample })
+          }}</span>
+        </label>
+      </section>
+
+      <section :class="ui.section()">
+        <div class="flex items-center justify-between">
+          <h3 :class="ui.sectionTitle()">{{ variables.modes }}</h3>
+          <IconButton
+            :label="variables.addMode"
+            data-test-id="variables-add-mode"
+            @click="emit('addMode')"
+          >
+            <icon-lucide-plus class="size-3.5" />
+          </IconButton>
+        </div>
+        <div
+          v-for="item in collection.modes"
+          :key="item.modeId"
+          :class="ui.mode()"
+          data-test-id="variables-mode"
+        >
+          <div class="flex items-center gap-1">
+            <AppInput
+              v-model="draft.modeNames[item.modeId]"
+              size="sm"
+              class="min-w-0 flex-1"
+              :aria-label="variables.renameMode"
+              @change="commitModeName(item.modeId)"
+              @enter="done"
+            />
+            <AppBadge v-if="item.modeId === collection.defaultModeId">
+              {{ variables.defaultMode }}
+            </AppBadge>
+            <DropdownMenuRoot>
+              <DropdownMenuTrigger as-child>
+                <IconButton :label="variables.modeActions({ mode: item.name })">
+                  <icon-lucide-ellipsis class="size-3.5" />
+                </IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuContent
+                  side="bottom"
+                  :side-offset="4"
+                  align="end"
+                  :class="menu.content"
+                >
+                  <MenuScrollArea>
+                    <DropdownMenuItem
+                      :class="menu.item"
+                      @select="emit('duplicateMode', item.modeId)"
+                    >
+                      <icon-lucide-copy :class="menu.icon" />
+                      {{ variables.duplicateMode }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      v-if="item.modeId !== collection.defaultModeId"
+                      :class="menu.item"
+                      @select="emit('setDefaultMode', item.modeId)"
+                    >
+                      <icon-lucide-pin :class="menu.icon" />
+                      {{ variables.setDefaultMode }}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator :class="menu.separator" />
+                    <DropdownMenuItem
+                      :class="dangerItem"
+                      :disabled="collection.modes.length <= 1"
+                      @select="emit('removeMode', item.modeId)"
+                    >
+                      <icon-lucide-trash-2 :class="menu.icon" />
+                      {{ variables.deleteMode }}
+                    </DropdownMenuItem>
+                  </MenuScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenuPortal>
+            </DropdownMenuRoot>
+          </div>
+
+          <template v-if="item.modeId === collection.defaultModeId">
+            <span :class="ui.label()">{{ variables.alwaysOn }}</span>
+            <code :class="ui.modeCSS()">:root</code>
+          </template>
+          <template v-else>
+            <span :class="ui.label()">{{ variables.appliesWhen }}</span>
+            <AppSelect
+              :model-value="condition(item.modeId).kind"
+              :options="kindOptions"
+              :label="`${item.name}: ${variables.appliesWhen}`"
+              :ui="{ trigger: 'w-full' }"
+              data-test-id="variables-mode-condition"
+              @update:model-value="setKind(item.modeId, $event)"
+            />
+            <AppInput
+              v-if="'width' in condition(item.modeId)"
+              v-model="draft.widths[item.modeId]"
+              type="number"
+              size="sm"
+              :aria-label="`${item.name}: ${variables.conditionWidth}`"
+              data-test-id="variables-mode-width"
+              @change="commitWidth(item.modeId)"
+              @enter="done"
+            >
+              <template #trailing><span :class="ui.hint()">px</span></template>
+            </AppInput>
+            <AppInput
+              v-if="condition(item.modeId).kind === 'custom'"
+              v-model="draft.custom[item.modeId]"
+              size="sm"
+              :aria-label="`${item.name}: ${variables.condition}`"
+              :placeholder="modeConditionPlaceholder(collection, item.modeId)"
+              :ui="{ input: 'font-mono' }"
+              @change="commitCustom(item.modeId)"
+              @enter="done"
+            />
+            <code v-else :class="ui.modeCSS()" data-test-id="variables-mode-css">{{
+              writtenAs(item.modeId)
+            }}</code>
+            <span :class="ui.hint()">{{ hint(item.modeId) }}</span>
+          </template>
+        </div>
+      </section>
+    </LockedRegion>
   </aside>
 </template>

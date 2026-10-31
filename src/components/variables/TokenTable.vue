@@ -10,6 +10,7 @@ import {
 } from '@open-pencil/scene-graph'
 import { useFlatReorderDrag, useI18n } from '@open-pencil/vue'
 
+import { useEditorStore } from '@/app/editor/active-store'
 import {
   parseTokenValueText,
   tokenValueText,
@@ -47,6 +48,9 @@ const emit = defineEmits<{
 }>()
 
 const { variables } = useI18n()
+const store = useEditorStore()
+/** A read-only document can be browsed: no in-place edit, no row menu, no delete key, no drag to reorder. */
+const readOnly = computed(() => store.state.readOnly === true)
 const ui = tv(tokensPanelTheme)()
 /** Figma does not show a variable the file adds to a library's collection; such a row says so. */
 const libraryCollection = computed(() => isLibraryCollection(collection))
@@ -122,6 +126,7 @@ function isEditing(id: string, modeId?: string) {
 }
 
 function startRename(id: string) {
+  if (readOnly.value) return
   editing.value = { id }
 }
 
@@ -141,7 +146,7 @@ function editableValue(row: TokenRow, modeId: string) {
 }
 
 function startValueEdit(row: TokenRow, modeId: string) {
-  if (editableValue(row, modeId)) editing.value = { id: row.variable.id, modeId }
+  if (!readOnly.value && editableValue(row, modeId)) editing.value = { id: row.variable.id, modeId }
 }
 
 function commitValue(row: TokenRow, modeId: string, text: string) {
@@ -159,7 +164,7 @@ function onContextMenu(event: MouseEvent) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (editing.value || selectedIds.value.length === 0) return
+  if (readOnly.value || editing.value || selectedIds.value.length === 0) return
   if (event.code !== 'Delete' && event.code !== 'Backspace') return
   event.preventDefault()
   emit('remove', [...selectedIds.value])
@@ -167,12 +172,13 @@ function onKeydown(event: KeyboardEvent) {
 
 const reorder = useFlatReorderDrag({
   items: () => rows.value.map((row) => ({ id: row.variable.id })),
-  onMove: (sourceId, targetIndex) => emit('reorder', sourceId, targetIndex, visibleIds.value)
+  onMove: (sourceId, targetIndex) =>
+    !readOnly.value && emit('reorder', sourceId, targetIndex, visibleIds.value)
 })
 
 function dragTarget(id: string, element: Element | ComponentPublicInstance | null) {
   const node = element instanceof Element ? element : element?.$el
-  reorder.setupItem(node instanceof HTMLElement ? node : null, () => ({ id }))
+  reorder.setupItem(!readOnly.value && node instanceof HTMLElement ? node : null, () => ({ id }))
 }
 
 function dropEdge(id: string) {
@@ -206,6 +212,7 @@ function dropEdge(id: string) {
       </span>
     </div>
     <TokenRowMenu
+      :read-only="readOnly"
       :groups="groupOptions"
       :single="selectedIds.length === 1"
       @rename="selectedIds[0] && startRename(selectedIds[0])"

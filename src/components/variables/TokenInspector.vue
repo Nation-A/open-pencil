@@ -29,6 +29,7 @@ import { useI18n } from '@open-pencil/vue'
 import type { AliasCandidate, TokenRow } from '@/app/editor/tokens/model'
 import { SCOPES_BY_TYPE } from '@/app/editor/tokens/scopes'
 import ColorInput from '@/components/ColorPicker/ColorInput.vue'
+import LockedRegion from '@/components/properties/panel/LockedRegion.vue'
 import { BindingPill, VariablePicker } from '@/components/ui/binding'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import AppInput from '@/components/ui/input/AppInput.vue'
@@ -271,158 +272,160 @@ function cssNameDone(event: KeyboardEvent) {
 
 <template>
   <aside :class="ui.inspector()" data-test-id="token-inspector">
-    <section :class="ui.section()">
-      <label :class="ui.field()">
-        <span :class="ui.label()">{{ variables.name }}</span>
-        <AppInput v-model="draft.name" size="sm" @change="commitName" @enter="done" />
-      </label>
-      <label :class="ui.field()">
-        <span :class="ui.label()">{{ variables.cssName }}</span>
-        <AppInput
-          v-model="draft.cssName"
-          size="sm"
-          :placeholder="row.cssName"
-          :state="cssNameInvalid ? 'invalid' : 'idle'"
-          :aria-invalid="cssNameInvalid"
-          :aria-describedby="cssNameInvalid ? cssNameErrorId : undefined"
-          :ui="{ input: 'font-mono pl-7' }"
-          data-test-id="variables-css-name"
-          @change="commitCSSName"
-          @enter="cssNameDone"
-        >
-          <template #leading><span :class="ui.prefix()">--</span></template>
-        </AppInput>
-        <p v-if="cssNameInvalid" :id="cssNameErrorId" :class="ui.error()" role="alert">
-          {{ variables.cssNameInvalid }}
-        </p>
-        <span :class="ui.hint()">{{ variables.cssNameHint }}</span>
-      </label>
-      <label v-if="variable.type === 'FLOAT'" :class="ui.field()">
-        <span :class="ui.label()">{{ variables.unit }}</span>
-        <AppSelect v-model="unit" :options="unitOptions" />
-      </label>
-    </section>
-
-    <section :class="ui.section()">
-      <h3 :class="ui.sectionTitle()">{{ singleMode ? variables.value : variables.values }}</h3>
-      <div v-for="mode in collection.modes" :key="mode.modeId" :class="ui.field()">
-        <span v-if="!singleMode" :class="ui.label()">{{ mode.name }}</span>
-        <div :class="ui.valueRow()">
-          <div v-if="alias(mode.modeId)" :class="ui.valueControl()">
-            <FillSwatch
-              v-if="aliasColor(mode.modeId)"
-              :fill="{
-                type: 'SOLID',
-                visible: true,
-                opacity: aliasColor(mode.modeId)?.a ?? 1,
-                color: aliasColor(mode.modeId) ?? { r: 0, g: 0, b: 0, a: 1 }
-              }"
-              :ui="{ root: 'size-5 shrink-0' }"
-            />
-            <BindingPill class="min-w-0 flex-1" :label="alias(mode.modeId) ?? ''" />
-          </div>
-          <ColorInput
-            v-else-if="color(mode.modeId)"
-            :color="color(mode.modeId) ?? { r: 0, g: 0, b: 0, a: 1 }"
-            editable
-            @update="emit('updateValue', mode.modeId, $event, colorGesture(mode.modeId))"
-            @open-change="setPickerOpen(mode.modeId, $event)"
-          />
-          <AppCheckbox
-            v-else-if="variable.type === 'BOOLEAN'"
-            :model-value="variable.valuesByMode[mode.modeId] === true"
-            :ariaLabel="mode.name"
-            @update:model-value="emit('updateValue', mode.modeId, $event)"
-          />
+    <LockedRegion>
+      <section :class="ui.section()">
+        <label :class="ui.field()">
+          <span :class="ui.label()">{{ variables.name }}</span>
+          <AppInput v-model="draft.name" size="sm" @change="commitName" @enter="done" />
+        </label>
+        <label :class="ui.field()">
+          <span :class="ui.label()">{{ variables.cssName }}</span>
           <AppInput
-            v-else
-            v-model="draft.values[mode.modeId]"
-            :type="variable.type === 'FLOAT' ? 'number' : 'text'"
+            v-model="draft.cssName"
             size="sm"
-            @change="commitValue(mode.modeId)"
-            @enter="done"
+            :placeholder="row.cssName"
+            :state="cssNameInvalid ? 'invalid' : 'idle'"
+            :aria-invalid="cssNameInvalid"
+            :aria-describedby="cssNameInvalid ? cssNameErrorId : undefined"
+            :ui="{ input: 'font-mono pl-7' }"
+            data-test-id="variables-css-name"
+            @change="commitCSSName"
+            @enter="cssNameDone"
           >
-            <template v-if="variable.type === 'FLOAT' && numberUnit !== 'none'" #trailing>
-              <span :class="ui.hint()">{{ numberUnit }}</span>
-            </template>
+            <template #leading><span :class="ui.prefix()">--</span></template>
           </AppInput>
-          <VariablePicker
-            :items="aliasCandidates"
-            :selected="aliasId(mode.modeId)"
-            :state="aliasId(mode.modeId) ? 'bound' : 'unbound'"
-            :trigger-label="
-              singleMode ? variables.useVariable : `${mode.name}: ${variables.useVariable}`
-            "
-            :search-placeholder="variables.searchVariables"
-            :empty-label="variables.noMatchingVariables"
-            :detach-label="variables.detachVariable"
-            side="left"
-            data-test-id="variables-use-variable"
-            @select="emit('alias', mode.modeId, $event)"
-            @detach="emit('detach', mode.modeId)"
+          <p v-if="cssNameInvalid" :id="cssNameErrorId" :class="ui.error()" role="alert">
+            {{ variables.cssNameInvalid }}
+          </p>
+          <span :class="ui.hint()">{{ variables.cssNameHint }}</span>
+        </label>
+        <label v-if="variable.type === 'FLOAT'" :class="ui.field()">
+          <span :class="ui.label()">{{ variables.unit }}</span>
+          <AppSelect v-model="unit" :options="unitOptions" />
+        </label>
+      </section>
+
+      <section :class="ui.section()">
+        <h3 :class="ui.sectionTitle()">{{ singleMode ? variables.value : variables.values }}</h3>
+        <div v-for="mode in collection.modes" :key="mode.modeId" :class="ui.field()">
+          <span v-if="!singleMode" :class="ui.label()">{{ mode.name }}</span>
+          <div :class="ui.valueRow()">
+            <div v-if="alias(mode.modeId)" :class="ui.valueControl()">
+              <FillSwatch
+                v-if="aliasColor(mode.modeId)"
+                :fill="{
+                  type: 'SOLID',
+                  visible: true,
+                  opacity: aliasColor(mode.modeId)?.a ?? 1,
+                  color: aliasColor(mode.modeId) ?? { r: 0, g: 0, b: 0, a: 1 }
+                }"
+                :ui="{ root: 'size-5 shrink-0' }"
+              />
+              <BindingPill class="min-w-0 flex-1" :label="alias(mode.modeId) ?? ''" />
+            </div>
+            <ColorInput
+              v-else-if="color(mode.modeId)"
+              :color="color(mode.modeId) ?? { r: 0, g: 0, b: 0, a: 1 }"
+              editable
+              @update="emit('updateValue', mode.modeId, $event, colorGesture(mode.modeId))"
+              @open-change="setPickerOpen(mode.modeId, $event)"
+            />
+            <AppCheckbox
+              v-else-if="variable.type === 'BOOLEAN'"
+              :model-value="variable.valuesByMode[mode.modeId] === true"
+              :ariaLabel="mode.name"
+              @update:model-value="emit('updateValue', mode.modeId, $event)"
+            />
+            <AppInput
+              v-else
+              v-model="draft.values[mode.modeId]"
+              :type="variable.type === 'FLOAT' ? 'number' : 'text'"
+              size="sm"
+              @change="commitValue(mode.modeId)"
+              @enter="done"
+            >
+              <template v-if="variable.type === 'FLOAT' && numberUnit !== 'none'" #trailing>
+                <span :class="ui.hint()">{{ numberUnit }}</span>
+              </template>
+            </AppInput>
+            <VariablePicker
+              :items="aliasCandidates"
+              :selected="aliasId(mode.modeId)"
+              :state="aliasId(mode.modeId) ? 'bound' : 'unbound'"
+              :trigger-label="
+                singleMode ? variables.useVariable : `${mode.name}: ${variables.useVariable}`
+              "
+              :search-placeholder="variables.searchVariables"
+              :empty-label="variables.noMatchingVariables"
+              :detach-label="variables.detachVariable"
+              side="left"
+              data-test-id="variables-use-variable"
+              @select="emit('alias', mode.modeId, $event)"
+              @detach="emit('detach', mode.modeId)"
+            />
+          </div>
+          <AppInput
+            v-if="variable.type === 'FLOAT' && !alias(mode.modeId)"
+            v-model="draft.expressions[mode.modeId]"
+            size="sm"
+            :placeholder="variables.expression"
+            :ui="{ input: 'font-mono' }"
+            @change="commitExpression(mode.modeId)"
+            @enter="done"
           />
         </div>
-        <AppInput
-          v-if="variable.type === 'FLOAT' && !alias(mode.modeId)"
-          v-model="draft.expressions[mode.modeId]"
+        <span v-if="variable.type === 'FLOAT'" :class="ui.hint()">{{
+          variables.expressionHint
+        }}</span>
+      </section>
+
+      <section v-if="scopes.length > 0" :class="ui.section()">
+        <h3 :class="ui.sectionTitle()">{{ variables.scopes }}</h3>
+        <label
+          v-for="scope in scopes"
+          :key="scope"
+          class="flex items-center gap-2 text-xs text-surface"
+        >
+          <AppCheckbox
+            :model-value="hasScope(scope)"
+            :ariaLabel="SCOPE_MESSAGES[scope]?.() ?? scope"
+            @update:model-value="toggleScope(scope, $event)"
+          />
+          {{ SCOPE_MESSAGES[scope]?.() ?? scope }}
+        </label>
+      </section>
+
+      <section :class="ui.section()">
+        <h3 :class="ui.sectionTitle()">{{ variables.description }}</h3>
+        <AppTextarea v-model="draft.description" :rows="2" @change="commitDescription" />
+      </section>
+
+      <section :class="ui.section()">
+        <label class="flex items-center gap-2 text-xs text-surface">
+          <AppCheckbox
+            :model-value="variable.hiddenFromPublishing"
+            :ariaLabel="variables.hiddenFromPublishing"
+            data-test-id="variables-hidden-from-publishing"
+            @update:model-value="emit('updateToken', { hiddenFromPublishing: $event })"
+          />
+          {{ variables.hiddenFromPublishing }}
+        </label>
+        <span :class="ui.hint()">{{ variables.hiddenFromPublishingHint }}</span>
+      </section>
+
+      <section :class="ui.section()">
+        <AppButton
+          variant="ghost"
+          color="error"
           size="sm"
-          :placeholder="variables.expression"
-          :ui="{ input: 'font-mono' }"
-          @change="commitExpression(mode.modeId)"
-          @enter="done"
-        />
-      </div>
-      <span v-if="variable.type === 'FLOAT'" :class="ui.hint()">{{
-        variables.expressionHint
-      }}</span>
-    </section>
-
-    <section v-if="scopes.length > 0" :class="ui.section()">
-      <h3 :class="ui.sectionTitle()">{{ variables.scopes }}</h3>
-      <label
-        v-for="scope in scopes"
-        :key="scope"
-        class="flex items-center gap-2 text-xs text-surface"
-      >
-        <AppCheckbox
-          :model-value="hasScope(scope)"
-          :ariaLabel="SCOPE_MESSAGES[scope]?.() ?? scope"
-          @update:model-value="toggleScope(scope, $event)"
-        />
-        {{ SCOPE_MESSAGES[scope]?.() ?? scope }}
-      </label>
-    </section>
-
-    <section :class="ui.section()">
-      <h3 :class="ui.sectionTitle()">{{ variables.description }}</h3>
-      <AppTextarea v-model="draft.description" :rows="2" @change="commitDescription" />
-    </section>
-
-    <section :class="ui.section()">
-      <label class="flex items-center gap-2 text-xs text-surface">
-        <AppCheckbox
-          :model-value="variable.hiddenFromPublishing"
-          :ariaLabel="variables.hiddenFromPublishing"
-          data-test-id="variables-hidden-from-publishing"
-          @update:model-value="emit('updateToken', { hiddenFromPublishing: $event })"
-        />
-        {{ variables.hiddenFromPublishing }}
-      </label>
-      <span :class="ui.hint()">{{ variables.hiddenFromPublishingHint }}</span>
-    </section>
-
-    <section :class="ui.section()">
-      <AppButton
-        variant="ghost"
-        color="error"
-        size="sm"
-        class="self-start"
-        data-test-id="variables-delete-variable"
-        @click="emit('remove')"
-      >
-        <template #leading><icon-lucide-trash-2 class="size-3.5" /></template>
-        {{ variables.deleteVariable }}
-      </AppButton>
-    </section>
+          class="self-start"
+          data-test-id="variables-delete-variable"
+          @click="emit('remove')"
+        >
+          <template #leading><icon-lucide-trash-2 class="size-3.5" /></template>
+          {{ variables.deleteVariable }}
+        </AppButton>
+      </section>
+    </LockedRegion>
   </aside>
 </template>

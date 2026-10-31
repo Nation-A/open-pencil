@@ -20,11 +20,17 @@ import MenuScrollArea from '@/components/ui/menu/MenuScrollArea.vue'
  * Right-click actions for the selected tokens. The list selects the row under the pointer before
  * the menu opens, so every action applies to what is highlighted.
  */
-const { groups, single } = defineProps<{
+const {
+  groups,
+  single,
+  readOnly = false
+} = defineProps<{
   /** Groups the tokens can move into, as their paths. */
   groups: string[]
   /** One token is selected, so it can be renamed in place. */
   single: boolean
+  /** A read-only document has no editing actions to offer, so the rows get no menu. */
+  readOnly?: boolean
 }>()
 const emit = defineEmits<{
   rename: []
@@ -40,7 +46,8 @@ const dangerItem = useMenuUI({ item: 'justify-start gap-2 text-error' }).item
 </script>
 
 <template>
-  <ContextMenuRoot>
+  <slot v-if="readOnly" />
+  <ContextMenuRoot v-else>
     <ContextMenuTrigger as-child>
       <slot />
     </ContextMenuTrigger>

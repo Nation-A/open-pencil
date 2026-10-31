@@ -49,6 +49,14 @@ export function renderSVGNode(node: SVGNode, indent = 0): string {
     return `${pad}<${node.tag}${attrsStr}>${escapeText(node.children[0] as string)}</${node.tag}>`
   }
 
+  // Inside <text>, whitespace between tspans is rendered: it must not be added by pretty-printing.
+  if (node.tag === 'text' || node.tag === 'tspan') {
+    const inner = node.children
+      .map((child) => (typeof child === 'string' ? escapeText(child) : renderSVGNode(child, 0)))
+      .join('')
+    return `${pad}<${node.tag}${attrsStr}>${inner}</${node.tag}>`
+  }
+
   const lines = [`${pad}<${node.tag}${attrsStr}>`]
   for (const child of node.children) {
     if (typeof child === 'string') {
